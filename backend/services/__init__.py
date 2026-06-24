@@ -52,6 +52,7 @@ from database import (
     db_get_reconciliation_log,
     db_save_confidence_history_entry,
     db_get_confidence_history,
+    db_get_distinct_topics,
     db_get_decay_settings,
     db_update_decay_settings,
     db_update_source_content,
@@ -721,6 +722,62 @@ async def get_graph_snapshot() -> GraphSnapshot:
     return GraphSnapshot(nodes=nodes, edges=edges)
 
 
+def get_matched_topic(query: str) -> Optional[str]:
+    """
+    Match the user's query against real, currently-existing topics from confidence_history.
+    Uses the same term-overlap approach as get_relevant_db_context.
+    Returns the matched topic, or None if no good match found.
+    """
+    # Get all distinct topics that exist in the database
+    available_topics = db_get_distinct_topics()
+    if not available_topics:
+        return None
+    
+    query_lower = query.lower()
+    stopwords = {
+        "what", "is", "a", "the", "about", "did", "change", "changed", "how", "why", "who", "where",
+        "to", "from", "for", "in", "on", "of", "and", "or", "project", "repo", "github", "source",
+        "i", "my", "me", "we", "us", "our", "you", "your", "he", "she", "it", "they", "them",
+        "before", "now", "vs", "versus", "after", "then", "believe", "believed", "think", "thought",
+        "since", "earlier", "back"
+    }
+    query_terms = [word.strip("?,.!-()\"'") for word in query_lower.split()]
+    query_terms = [word for word in query_terms if word and len(word) > 2 and word not in stopwords]
+    
+    # If no significant terms extracted, return None
+    if not query_terms:
+        return None
+    
+    # Try to find a topic that matches query terms
+    best_match = None
+    best_score = 0
+    
+    for topic in available_topics:
+        topic_lower = topic.lower()
+        # Count how many query terms appear in the topic
+        match_count = sum(1 for term in query_terms if term in topic_lower)
+        if match_count > best_score:
+            best_score = match_count
+            best_match = topic
+    
+    # Also check if query contains keywords that suggest which topic
+    for topic in available_topics:
+        topic_lower = topic.lower()
+        for term in query_terms:
+            # Look for meaningful keyword overlap
+            if (term in topic_lower or 
+                (term in ["canvas", "color", "background", "theme", "design", "palette"] and "canvas" in topic_lower) or
+                (term in ["security", "auth", "access", "header", "key", "control"] and "security" in topic_lower) or
+                (term in ["typography", "font", "text", "serif", "type", "family"] and "typography" in topic_lower)):
+                return topic
+    
+    # If we found a topic with matching terms, return it
+    if best_match and best_score > 0:
+        return best_match
+    
+    return None
+
+
 def get_relevant_db_context(query: str, db_sources: list, db_conflicts: list) -> list[str]:
     query_lower = query.lower()
     stopwords = {
@@ -850,7 +907,7 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
     graph_ctx_lines.extend(get_relevant_db_context(req.query, db_sources, db_conflicts))
 
     # Dynamically inject git commit history for history-related queries if github sources are present
-    history_keywords = {"changed", "change", "changes", "commit", "commits", "history", "git", "since", "repository", "author", "march"}
+    history_keywords = {"changed", "change", "changes", "commit", "commits", "history", "git", "since", "repository", "author", "decision", "decided"}
     if any(k in query for k in history_keywords):
         for s in db_sources:
             if s.type == "github" and s.url:
@@ -858,11 +915,11 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
                 if commits_ctx:
                     graph_ctx_lines.append(commits_ctx)
 
-    # If the user is asking about tech stack changes, project updates, or conflicts, inject the conflict records
-    change_keywords = {"changed", "change", "changes", "tech", "stack", "project", "db", "database", "auth", "conflict", "conflicts", "reconciliation", "march", "since"}
+    # If the user is asking about changes or conflicts, inject the conflict records
+    change_keywords = {"changed", "change", "changes", "conflict", "conflicts", "reconciliation", "since", "before", "decision", "decided", "different", "versus"}
     if any(k in query for k in change_keywords):
         if db_conflicts:
-            graph_ctx_lines.append("\n[Active Tech Stack Conflicts & Decisions:]")
+            graph_ctx_lines.append("\n[Active Conflicts & Decisions:]")
             for c in db_conflicts:
                 graph_ctx_lines.append(
                     f"- Topic: {c.topic}\n"
@@ -972,30 +1029,31 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
     timeline_list: Optional[list[TimelinePoint]] = None
 
     if intent == "what_changed":
-        topic = "tech stack"
-        if "database" in query or "auth" in query or "postgres" in query or "supabase" in query:
-            topic = query
-        db_recon_log = db_get_reconciliation_log()
+        matched_topic = get_matched_topic(query)
+        if matched_topic:
+            db_recon_log = db_get_reconciliation_log(matched_topic)
+        else:
+            db_recon_log = []
         added = [e.newSummary for e in db_recon_log if e.eventType == "added" and e.newSummary]
         removed = [e.oldSummary for e in db_recon_log if e.eventType == "removed" and e.oldSummary]
         changed = [(e.oldSummary or "", e.newSummary or "") for e in db_recon_log if e.eventType == "changed" and e.oldSummary and e.newSummary]
         decisions = [e.newSummary for e in db_recon_log if e.eventType == "new_decision" and e.newSummary]
         
-        # Only attach diff card if there is actual historical data
+        # Only attach diff card if there is actual historical data for the matched topic
         if added or removed or changed or decisions:
+            topic_label = matched_topic if matched_topic else "recorded changes"
             diff_card = DiffCard(
-                topic=topic, sinceDate="Earliest recorded change",
+                topic=topic_label, sinceDate="Earliest recorded change",
                 added=added, removed=removed, changed=changed, newDecisions=decisions,
             )
     elif intent == "temporal_belief":
-        topic = "Database choice"  # default topic for timeline
-        if "auth" in query:
-            topic = "Auth provider"
-        db_history = db_get_confidence_history(topic)
-        if db_history:
-            timeline_list = [
-                TimelinePoint(date=h.date, valueSummary=h.valueSummary, confidenceScore=h.confidenceScore, reason=h.reason)
-                for h in sorted(db_history, key=lambda x: x.date)
+        matched_topic = get_matched_topic(query)
+        if matched_topic:
+            db_history = db_get_confidence_history(matched_topic)
+            if db_history:
+                timeline_list = [
+                    TimelinePoint(date=h.date, valueSummary=h.valueSummary, confidenceScore=h.confidenceScore, reason=h.reason)
+                    for h in sorted(db_history, key=lambda x: x.date)
             ]
 
     return ChatMessage(

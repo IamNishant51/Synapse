@@ -7,9 +7,9 @@ import { useChat } from "@/context/ChatContext";
 import type { ChatMessage, DiffCard, TimelinePoint } from "@/lib/types";
 
 const promptChips = [
-  "What changed about my tech stack since March?",
-  "What did I believe about databases before vs now?",
-  "Why did I decide to switch from Postgres to Supabase?",
+  "What changed about Canvas Theme?",
+  "What did I believe about Typography Choice before vs now?",
+  "What are the Backend Security decisions I've made?",
 ];
 
 function DiffCardView({ diff }: { diff: DiffCard }) {

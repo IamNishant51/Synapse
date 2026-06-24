@@ -19,10 +19,10 @@ Synapse integrates Cognee's memory lifecycle APIs directly to solve the hackatho
 
 | Cognee Operation | Code Location | Synapse Application Feature |
 |---|---|---|
-| `remember()` | [services/__init__.py:L363](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L363) | Ingests PDF files, GitHub repositories, conversations, articles, and YouTube transcripts. |
-| `recall()` | [services/__init__.py:L782](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L782) | Powers graph-grounded, time-aware chat queries ("what did I believe before vs now"). |
-| `improve()` / memify | [services/__init__.py:L367](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L367) | Runs the **Reconciliation Pass** after ingestion to detect semantic conflicts and updates confidence weights. |
-| `forget()` | [services/__init__.py:L1062](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L1062) | Enables user-triggered manual pruning, source-level forgetting, and automatic decay of stale nodes. |
+| `remember()` | [services/__init__.py:L387](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L387) | Ingests PDF files, GitHub repositories, conversations, articles, and YouTube transcripts. |
+| `recall()` | [services/__init__.py:L934](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L934) | Powers graph-grounded, time-aware chat queries ("what did I believe before vs now"). |
+| `improve()` / memify | [services/__init__.py:L461](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L461) | Runs the **Reconciliation Pass** after ingestion to detect semantic conflicts and updates confidence weights. |
+| `forget()` | [services/__init__.py:L1218](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L1218) | Enables user-triggered manual pruning, source-level forgetting, and automatic decay of stale nodes. |
 
 ---
 

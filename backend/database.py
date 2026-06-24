@@ -312,10 +312,13 @@ def db_save_reconciliation_log_entry(e: ReconciliationLogEntry):
     conn.commit()
     conn.close()
 
-def db_get_reconciliation_log() -> List[ReconciliationLogEntry]:
+def db_get_reconciliation_log(topic: Optional[str] = None) -> List[ReconciliationLogEntry]:
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM reconciliation_log ORDER BY created_at DESC")
+    if topic:
+        cursor.execute("SELECT * FROM reconciliation_log WHERE topic=? ORDER BY created_at DESC", (topic,))
+    else:
+        cursor.execute("SELECT * FROM reconciliation_log ORDER BY created_at DESC")
     rows = cursor.fetchall()
     conn.close()
     return [
@@ -362,6 +365,15 @@ def db_get_confidence_history(topic: Optional[str] = None) -> List[ConfidenceHis
         )
         for r in rows
     ]
+
+def db_get_distinct_topics() -> List[str]:
+    """Get all distinct topics from confidence_history that have recorded beliefs."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT DISTINCT topic FROM confidence_history ORDER BY topic")
+    rows = cursor.fetchall()
+    conn.close()
+    return [r["topic"] for r in rows]
 
 # Decay Settings CRUD
 def db_get_decay_settings() -> DecaySettings:
