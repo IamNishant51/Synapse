@@ -8,9 +8,7 @@ import type {
   SourceType,
 } from "./types";
 
-const API_BASE = (typeof process !== "undefined"
-  ? process.env.NEXT_PUBLIC_COGNEE_API_URL
-  : "http://localhost:8000") || "http://localhost:8000";
+const API_BASE = "/api/proxy";
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${endpoint}`;

@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+import os
+from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from models import (
     IngestRequest,
@@ -24,11 +25,20 @@ from services import (
     forget_source,
 )
 
-app = FastAPI(title="Synapse — Cognee Backend", version="0.1.0")
+async def verify_access_key(x_synapse_key: str = Header(None)):
+    secret = os.environ.get("SYNAPSE_ACCESS_KEY")
+    if secret and x_synapse_key != secret:
+        raise HTTPException(status_code=403, detail="Invalid or missing X-Synapse-Key header")
+
+app = FastAPI(
+    title="Synapse — Cognee Backend", 
+    version="0.1.0",
+    dependencies=[Depends(verify_access_key)]
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[os.environ.get("FRONTEND_URL", "http://localhost:3000")],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

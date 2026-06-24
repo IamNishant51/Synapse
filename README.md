@@ -19,10 +19,10 @@ Synapse integrates Cognee's memory lifecycle APIs directly to solve the hackatho
 
 | Cognee Operation | Code Location | Synapse Application Feature |
 |---|---|---|
-| `remember()` | [services/__init__.py:L340](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L340) | Ingests PDF files, GitHub repositories, conversations, articles, and YouTube transcripts. |
-| `recall()` | [services/__init__.py:L633](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L633) | Powers graph-grounded, time-aware chat queries ("what did I believe before vs now"). |
-| `improve()` / memify | [services/__init__.py:L353](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L353) | Runs the **Reconciliation Pass** after ingestion to detect semantic conflicts and updates confidence weights. |
-| `forget()` | [services/__init__.py:L789](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L789) | Enables user-triggered manual pruning, source-level forgetting, and automatic decay of stale nodes. |
+| `remember()` | [services/__init__.py:L363](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L363) | Ingests PDF files, GitHub repositories, conversations, articles, and YouTube transcripts. |
+| `recall()` | [services/__init__.py:L782](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L782) | Powers graph-grounded, time-aware chat queries ("what did I believe before vs now"). |
+| `improve()` / memify | [services/__init__.py:L373](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L373) | Runs the **Reconciliation Pass** after ingestion to detect semantic conflicts and updates confidence weights. |
+| `forget()` | [services/__init__.py:L1062](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L1062) | Enables user-triggered manual pruning, source-level forgetting, and automatic decay of stale nodes. |
 
 ---
 
@@ -50,7 +50,7 @@ Queries matching a temporal belief/delta pattern (e.g. "what changed about my da
 ---
 
 ## 6. Known Limitations
-- **Single-User Scope**: This is a single-instance demonstration. While guarded by a shared-secret access key (`SYNAPSE_ACCESS_KEY`), it is not currently configured for multi-tenant auth.
+- **Single-User Scope**: This is a single-instance demonstration. While guarded on both the frontend and backend by a shared-secret access key (`SYNAPSE_ACCESS_KEY`), it is not currently configured for multi-tenant auth.
 - **Browser-Local Chat History**: Conversation history in the `/ask` view is stored locally in your browser's `localStorage` and will not persist across different devices.
 
 ---
@@ -70,7 +70,7 @@ Queries matching a temporal belief/delta pattern (e.g. "what changed about my da
 
 *Note: This project was built with the assistance of an AI coding agent as part of the hackathon build process, in compliance with the hackathon's AI usage rules.*
 
-## 6. How to Run Locally
+## 8. How to Run Locally
 
 ### Backend Setup
 1. Navigate to `/backend`:
