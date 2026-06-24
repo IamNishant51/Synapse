@@ -1,0 +1,19 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Database
+synapse_meta.db
+
+# Uploads
+services/tmp_uploads/
+
+# IDE
+.vscode/
+.idea/
