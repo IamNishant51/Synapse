@@ -23,18 +23,7 @@ export const tokens = {
     "semantic-success": "#27a644",
     "semantic-danger": "#e5484d",
   },
-  typography: {
-    "display-md": { size: "40px", weight: 600, lineHeight: 1.15, tracking: "-1.0px" },
-    headline: { size: "28px", weight: 600, lineHeight: 1.2, tracking: "-0.6px" },
-    "card-title": { size: "22px", weight: 500, lineHeight: 1.25, tracking: "-0.4px" },
-    subhead: { size: "20px", weight: 400, lineHeight: 1.4, tracking: "-0.2px" },
-    "body-lg": { size: "18px", weight: 400, lineHeight: 1.5, tracking: "-0.1px" },
-    body: { size: "16px", weight: 400, lineHeight: 1.5, tracking: "-0.05px" },
-    "body-sm": { size: "14px", weight: 400, lineHeight: 1.5, tracking: "0" },
-    caption: { size: "12px", weight: 400, lineHeight: 1.4, tracking: "0" },
-    button: { size: "14px", weight: 500, lineHeight: 1.2, tracking: "0" },
-    mono: { size: "13px", weight: 400, lineHeight: 1.5, tracking: "0" },
-  },
+
   rounded: {
     sm: "6px",
     md: "8px",

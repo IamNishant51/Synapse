@@ -1,6 +1,8 @@
-# Synapse — A self-organizing personal knowledge graph
+# Synapse: The Autonomous Memory Dashboard
 
-**A personal knowledge graph that doesn't just remember — it reconciles, decays, and forgets on purpose.**
+**[▶️ Watch the 100-Second Demo Video Here](#)**
+
+*Because an LLM that forgets your decisions is just a search engine.*
 
 Built for: *The Hangover Part AI: Where's My Context?* — WeMakeDevs × Cognee Hackathon (Jun 29 – Jul 5, 2026)
 
@@ -17,10 +19,10 @@ Synapse integrates Cognee's memory lifecycle APIs directly to solve the hackatho
 
 | Cognee Operation | Code Location | Synapse Application Feature |
 |---|---|---|
-| `remember()` | [services/__init__.py:L340](file:///home/nishant/Desktop/synapse/backend/services/__init__.py#L340) | Ingests PDF files, GitHub repositories, conversations, articles, and YouTube transcripts. |
-| `recall()` | [services/__init__.py:L633](file:///home/nishant/Desktop/synapse/backend/services/__init__.py#L633) | Powers graph-grounded, time-aware chat queries ("what did I believe before vs now"). |
-| `improve()` / memify | [services/__init__.py:L353](file:///home/nishant/Desktop/synapse/backend/services/__init__.py#L353) | Runs the **Reconciliation Pass** after ingestion to detect semantic conflicts and updates confidence weights. |
-| `forget()` | [services/__init__.py:L789](file:///home/nishant/Desktop/synapse/backend/services/__init__.py#L789) | Enables user-triggered manual pruning, source-level forgetting, and automatic decay of stale nodes. |
+| `remember()` | [services/__init__.py:L340](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L340) | Ingests PDF files, GitHub repositories, conversations, articles, and YouTube transcripts. |
+| `recall()` | [services/__init__.py:L633](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L633) | Powers graph-grounded, time-aware chat queries ("what did I believe before vs now"). |
+| `improve()` / memify | [services/__init__.py:L353](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L353) | Runs the **Reconciliation Pass** after ingestion to detect semantic conflicts and updates confidence weights. |
+| `forget()` | [services/__init__.py:L789](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L789) | Enables user-triggered manual pruning, source-level forgetting, and automatic decay of stale nodes. |
 
 ---
 
@@ -43,9 +45,30 @@ Queries matching a temporal belief/delta pattern (e.g. "what changed about my da
 
 ## 5. Technical Stack
 *   **Frontend**: Next.js 15 (App Router), Tailwind CSS, TypeScript, `react-force-graph-3d` for the memory node visualization.
-*   **Backend**: FastAPI (Python), SQLite metadata store ([database.py](file:///home/nishant/Desktop/synapse/backend/database.py)), Cognee SDK, and Gemini / Groq API wrappers.
+*   **Backend**: FastAPI (Python), SQLite metadata store ([database.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/database.py)), Cognee SDK, and Gemini / Groq API wrappers.
 
 ---
+
+## 6. Known Limitations
+- **Single-User Scope**: This is a single-instance demonstration. While guarded by a shared-secret access key (`SYNAPSE_ACCESS_KEY`), it is not currently configured for multi-tenant auth.
+- **Browser-Local Chat History**: Conversation history in the `/ask` view is stored locally in your browser's `localStorage` and will not persist across different devices.
+
+---
+
+## 7. Judging Criteria Alignment
+
+| Criterion | Synapse Implementation |
+|---|---|
+| **Potential Impact** | Solves the "context amnesia" problem for high-turnover projects by ensuring organizational knowledge scales without degrading. |
+| **Creativity & Innovation** | The **Reconciliation Engine**: instead of blindly appending facts, it detects contradictions and forces human judgment to build a coherent graph. |
+| **Technical Excellence** | Clean Next.js + FastAPI split, responsive UI, 3D interactive force graph, strict typing, and structured LLM JSON-parsing with exponential backoff. |
+| **Best Use of Cognee** | Maps directly to Cognee's `remember()`, `recall()`, and `forget()` primitives, turning the SDK into a visual, user-manageable memory dashboard. |
+| **User Experience** | Sleek dark-mode interface with skeleton loaders, `ResizeObserver` responsive layouts, GSAP animations, and zero layout shift. |
+| **Presentation Quality** | See the 100-second demo video at the top of this README. |
+
+---
+
+*Note: This project was built with the assistance of an AI coding agent as part of the hackathon build process, in compliance with the hackathon's AI usage rules.*
 
 ## 6. How to Run Locally
 

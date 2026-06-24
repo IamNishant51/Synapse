@@ -389,11 +389,10 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest)
         # Reconciliation is best-effort — don't fail the source if it errors
         try:
             new_nodes = await recon_task
+            jobs[job_id].update({"progress": 100, "status": "completed"})
         except Exception as recon_err:
             print(f"[Reconciliation] failed for {req.label}: {recon_err}", flush=True)
-            new_nodes = []
-
-        jobs[job_id].update({"progress": 100, "status": "completed"})
+            jobs[job_id].update({"currentStep": "reconcile_failed", "progress": 100, "status": "completed"})
 
     except Exception as e:
         source.status = "failed"
@@ -466,45 +465,31 @@ async def run_reconciliation(content: str, label: str, date: str) -> list[dict]:
         f"New content from \"{label}\" on {date}:\n{content[:2000]}\n\n"
         f"Analyze for contradictions or supersessions. Return JSON array."
     )
-    llm_result = ""
-    if HAS_LLM:
-        llm_result = await call_llm(user_prompt, system_prompt=sys_prompt)
-
-    # Try to parse LLM response; fall back to keyword matching
     contradictions = None
-    if llm_result:
-        import json as _json
-        try:
-            cleaned = llm_result.strip()
-            if cleaned.startswith("```"):
-                cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
-                if "```" in cleaned:
-                    cleaned = cleaned.rsplit("```", 1)[0]
-            cleaned = cleaned.strip()
-            if cleaned.startswith("["):
-                contradictions = _json.loads(cleaned)
-        except Exception:
-            contradictions = None
+    if HAS_LLM:
+        for attempt in range(3):
+            llm_result = await call_llm(user_prompt, system_prompt=sys_prompt)
+            if llm_result:
+                import json as _json
+                try:
+                    cleaned = llm_result.strip()
+                    if cleaned.startswith("```"):
+                        cleaned = cleaned.split("\n", 1)[1] if "\n" in cleaned else cleaned[3:]
+                        if "```" in cleaned:
+                            cleaned = cleaned.rsplit("```", 1)[0]
+                    cleaned = cleaned.strip()
+                    if cleaned.startswith("["):
+                        contradictions = _json.loads(cleaned)
+                        break
+                except Exception as parse_err:
+                    print(f"[Reconciliation] LLM parse error on attempt {attempt+1}: {parse_err}", flush=True)
+            
+            if attempt < 2:
+                await asyncio.sleep(2 ** attempt)
 
-    # Fallback keyword detection if LLM returned nothing useful
     if contradictions is None:
-        contradictions = []
-        active_source_labels = {s.label for s in existing_sources}
-        for keyword, topic, summary, rel, old_summary, old_source in [
-            ("Supabase", "Database choice", "Switched everything to Supabase", "supersedes", "Using Postgres for the main datastore", "ChatGPT — backend planning"),
-            ("Clerk", "Auth provider", "Authentication switched from JWT to Clerk", "supersedes", "Using JWT for authentication", "ChatGPT — backend planning"),
-        ]:
-            if old_source in active_source_labels and keyword.lower() in content.lower():
-                contradictions.append({
-                    "topic": topic, "summary": summary,
-                    "relationship": rel, "confidenceScore": 0.90,
-                })
-                new_nodes.append({
-                    "topic": topic, "summary": summary,
-                    "date": date, "source": label,
-                    "old_summary": old_summary,
-                    "old_date": "Mar 2, 2026", "old_source": old_source,
-                })
+        print("[Reconciliation] Failed to detect conflicts using LLM after 3 attempts.", flush=True)
+        raise RuntimeError("Reconciliation failed due to LLM error")
 
     for c in contradictions:
         topic = c.get("topic", "Unknown")
@@ -601,6 +586,11 @@ async def get_graph_snapshot() -> GraphSnapshot:
                     confidence=0.8
                 ))
             if mapped_nodes:
+                MAX_NODES = 300
+                if len(mapped_nodes) > MAX_NODES:
+                    mapped_nodes = mapped_nodes[:MAX_NODES]
+                    node_ids = {n.id for n in mapped_nodes}
+                    mapped_edges = [e for e in mapped_edges if e.source in node_ids and e.target in node_ids]
                 return GraphSnapshot(nodes=mapped_nodes, edges=mapped_edges)
         except Exception as cognee_err:
             print(f"[Cognee] get_memory_provenance_graph failed: {cognee_err}", flush=True)
@@ -698,6 +688,12 @@ async def get_graph_snapshot() -> GraphSnapshot:
                         relationship="mentions",
                         confidence=0.7
                     ))
+
+    MAX_NODES = 300
+    if len(nodes) > MAX_NODES:
+        nodes = nodes[:MAX_NODES]
+        node_ids = {n.id for n in nodes}
+        edges = [e for e in edges if e.source in node_ids and e.target in node_ids]
 
     return GraphSnapshot(nodes=nodes, edges=edges)
 

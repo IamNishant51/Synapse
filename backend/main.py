@@ -112,5 +112,3 @@ async def forget_source_endpoint(req: ForgetSourceRequest):
     await forget_source(req.sourceId)
     return {"status": "ok"}
 
-# Trigger server reload
-# EOF
