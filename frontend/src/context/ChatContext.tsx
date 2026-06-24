@@ -101,10 +101,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   }, [messages]);
 
   useEffect(() => {
-    persistConvIndex(convIndex);
-  }, [convIndex]);
-
-  useEffect(() => {
     return () => {
       abortRef.current?.abort();
       abortRef.current = null;
@@ -116,13 +112,17 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     const convId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     saveConvMessages(convId, currentMsgs);
     const convs = getConvIndex();
-    convs.unshift({
-      id: convId,
-      title: generateTitle(currentMsgs),
-      updatedAt: new Date().toISOString(),
-      messageCount: currentMsgs.length,
-    });
-    setConvIndex([...convs]);
+    const updatedConvs = [
+      {
+        id: convId,
+        title: generateTitle(currentMsgs),
+        updatedAt: new Date().toISOString(),
+        messageCount: currentMsgs.length,
+      },
+      ...convs
+    ];
+    persistConvIndex(updatedConvs);
+    setConvIndex(updatedConvs);
     return convId;
   }, []);
 
@@ -138,14 +138,20 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     if (stored) {
       setMessages(stored);
     }
-    setConvIndex(prev => prev.filter(c => c.id !== convId));
+    const convs = getConvIndex();
+    const updatedConvs = convs.filter(c => c.id !== convId);
+    persistConvIndex(updatedConvs);
+    setConvIndex(updatedConvs);
     setShowHistory(false);
   }, [messages, saveCurrentToHistory]);
 
   const deleteConversation = useCallback((convId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     deleteConvMessages(convId);
-    setConvIndex(prev => prev.filter(c => c.id !== convId));
+    const convs = getConvIndex();
+    const updatedConvs = convs.filter(c => c.id !== convId);
+    persistConvIndex(updatedConvs);
+    setConvIndex(updatedConvs);
   }, []);
 
   const handleSubmit = async (query?: string) => {
