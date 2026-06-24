@@ -216,6 +216,7 @@ export default function GraphPage() {
     return false;
   });
 
+
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -291,41 +292,53 @@ export default function GraphPage() {
       const color = nodeColor(node);
       const group = new THREE.Group();
 
-      const sphereGeo = new THREE.SphereGeometry(node.isDecisionType ? 7 : 5, 32, 32);
-      const sphereMat = new THREE.MeshPhysicalMaterial({
+      const isDecision = node.isDecisionType;
+      const outerRadius = isDecision ? 8 : 5.5;
+      const innerRadius = isDecision ? 3.5 : 2.4;
+
+      // 1. Inner solid core
+      const coreGeo = new THREE.SphereGeometry(innerRadius, 32, 32);
+      const coreMat = new THREE.MeshPhysicalMaterial({
         color,
-        roughness: 0.1,
-        metalness: 0.1,
+        roughness: 0.15,
+        metalness: 0.2,
         clearcoat: 1.0,
-        clearcoatRoughness: 0.05,
       });
-      const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-      group.add(sphere);
+      const core = new THREE.Mesh(coreGeo, coreMat);
+      group.add(core);
+
+      // 2. Outer refracting water/glass bubble sphere
+      const bubbleGeo = new THREE.SphereGeometry(outerRadius, 32, 32);
+      const bubbleMat = new THREE.MeshPhysicalMaterial({
+        color: "#ffffff",
+        transparent: true,
+        opacity: 0.4,
+        roughness: 0.02,
+        metalness: 0.05,
+        transmission: 0.95,
+        ior: 1.333,
+        thickness: 2.0,
+        clearcoat: 1.0,
+        clearcoatRoughness: 0.01,
+      });
+      const bubble = new THREE.Mesh(bubbleGeo, bubbleMat);
+      group.add(bubble);
 
       if (glowTexRef.current) {
         const spriteMat = new THREE.SpriteMaterial({
           map: glowTexRef.current,
-          blending: THREE.NormalBlending,
+          blending: THREE.AdditiveBlending,
           transparent: true,
-          opacity: 0.4,
+          opacity: 0.35,
           color,
           depthWrite: false,
         });
         const sprite = new THREE.Sprite(spriteMat);
-        sprite.scale.set(30, 30, 1);
+        sprite.scale.set(24, 24, 1);
         group.add(sprite);
       }
 
-      const haloGeo = new THREE.TorusGeometry(node.isDecisionType ? 12 : 9, 0.3, 16, 64);
-      const haloMat = new THREE.MeshBasicMaterial({
-        color,
-        transparent: true,
-        opacity: 0.15,
-        side: THREE.DoubleSide,
-      });
-      const halo = new THREE.Mesh(haloGeo, haloMat);
-      halo.rotation.x = -Math.PI / 2;
-      group.add(halo);
+
 
       return group;
     },
@@ -334,29 +347,43 @@ export default function GraphPage() {
 
   const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
     const label = node.label || "";
-    const size = node.isDecisionType ? 10 : 7;
+    const size = node.isDecisionType ? 11 : 8;
     const color = nodeColor(node);
 
-    // Glow effect
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 10 / globalScale;
+    // 1. Draw outer water bubble reflection and refraction shading
+    const gradient = ctx.createRadialGradient(
+      node.x - size * 0.25, node.y - size * 0.25, size * 0.1,
+      node.x, node.y, size
+    );
+    gradient.addColorStop(0, "rgba(255, 255, 255, 0.95)");
+    gradient.addColorStop(0.3, "rgba(235, 245, 255, 0.55)");
+    gradient.addColorStop(0.85, "rgba(200, 215, 235, 0.15)");
+    gradient.addColorStop(1, "rgba(175, 195, 220, 0.35)");
 
-    // Draw node circle
     ctx.beginPath();
     ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Bubble contour stroke
+    ctx.strokeStyle = "rgba(160, 185, 210, 0.4)";
+    ctx.lineWidth = 0.75;
+    ctx.stroke();
+
+    // 2. Draw small water highlight drop reflections
+    ctx.beginPath();
+    ctx.arc(node.x - size * 0.35, node.y - size * 0.35, size * 0.12, 0, 2 * Math.PI, false);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
+    ctx.fill();
+
+    // 3. Draw inner solid core (floating inside the water bubble)
+    const coreSize = size * 0.4;
+    ctx.beginPath();
+    ctx.arc(node.x, node.y, coreSize, 0, 2 * Math.PI, false);
     ctx.fillStyle = color;
     ctx.fill();
 
-    // Draw outer halo stroke
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, size + 4, 0, 2 * Math.PI, false);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
 
-    // Reset shadow
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
 
     // Label styling
     const fontSize = 11 / globalScale;

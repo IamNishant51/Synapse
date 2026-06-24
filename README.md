@@ -14,8 +14,8 @@ The following flow illustrates how Synapse manages the ingestion, contradiction 
 
 ```mermaid
 graph TD
-    classDef highlight fill:#f5f3f1,stroke:#292524,stroke-width:2px;
-    classDef database fill:#ffffff,stroke:#d6d3d1,stroke-width:1.5px;
+    classDef highlight stroke:#3b82f6,stroke-width:2px;
+    classDef database stroke:#10b981,stroke-width:2px;
     
     Raw[Raw Context: PDFs, repos, YouTube, ChatGPT, articles] -->|1. Ingest| Ingestion[Cognee Ingestion Pipeline]
     Ingestion -->|2. cognify| GraphDb[(Cognee Graph Store)]:::database
