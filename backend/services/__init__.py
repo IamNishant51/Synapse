@@ -818,8 +818,11 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
         answer = llm_answer
 
     # If the LLM returned "don't know" but we have relevant data in context, build answer directly
+    # We only override the LLM response if it is a short refusal (e.g., under 180 characters).
+    # If the LLM actually wrote a detailed explanation but included a caveat, we keep its conversational answer.
     ignorance_phrases = ["don't have", "no information", "no context", "couldn't find", "not mentioned", "not enough", "don't know", "cannot determine", "doesn't contain"]
-    if any(p in answer.lower() for p in ignorance_phrases):
+    is_refusal = len(answer.strip()) < 180 and any(p in answer.lower() for p in ignorance_phrases)
+    if is_refusal:
         conflict_lines = [l for l in graph_ctx_lines if l.startswith("- Conflict in")]
         content_lines = []
         source_labels = []
