@@ -303,8 +303,11 @@ def fetch_youtube_transcript(url: str) -> str:
         raise ValueError("Could not extract YouTube video ID")
         
     try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-        transcript_text = " ".join([t["text"] for t in transcript_list])
+        api = YouTubeTranscriptApi()
+        transcript_list = api.list(video_id)
+        transcript = transcript_list.find_transcript(["en"])
+        transcript_data = transcript.fetch()
+        transcript_text = " ".join([t.text for t in transcript_data])
         return transcript_text
     except Exception as e:
         raise ValueError(f"Could not retrieve YouTube transcript: {e}")
