@@ -400,7 +400,7 @@ export default function AskPage() {
       <div className="absolute top-[-10%] right-[-10%] w-[450px] h-[450px] orb-sky opacity-20 blur-[110px] pointer-events-none" />
       <div className="absolute bottom-[-10%] left-[-15%] w-[400px] h-[400px] orb-peach opacity-20 blur-[100px] pointer-events-none" />
 
-      <div className="shrink-0 px-6 md:px-12 pt-6 pb-4 border-b border-hairline flex items-center justify-between bg-canvas/80 backdrop-blur-md relative z-10">
+      <div className="shrink-0 px-4 sm:px-6 md:px-12 pt-4 pb-3 sm:pt-6 sm:pb-4 border-b border-hairline flex items-center justify-between bg-canvas/80 backdrop-blur-md relative z-10">
         <div>
           <div className="caption-upper text-muted" style={{ fontSize: "11px" }}>Recall & queries</div>
           <h1 className="display-sm text-ink mt-0.5">Ask Synapse</h1>
@@ -409,13 +409,13 @@ export default function AskPage() {
           <div className="relative" ref={historyRef}>
             <button
               onClick={() => setShowHistory(v => !v)}
-              className="px-4 py-2 rounded-full bg-surface-card border border-hairline-strong text-xs font-semibold text-body hover:text-ink hover:bg-surface-strong transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-sm"
+              className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-surface-card border border-hairline-strong text-xs font-semibold text-body hover:text-ink hover:bg-surface-strong transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-sm"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
-              History
+              <span className="hidden sm:inline">History</span>
             </button>
             {showHistory && (
               <div className="absolute right-0 top-full mt-2 w-72 max-h-80 overflow-y-auto rounded-xl border border-hairline bg-surface-card shadow-lg z-50 p-2 space-y-1">
@@ -452,12 +452,12 @@ export default function AskPage() {
           </div>
           <button
             onClick={newConversation}
-            className="px-4 py-2 rounded-full bg-surface-card border border-hairline-strong text-xs font-semibold text-body hover:text-ink hover:bg-surface-strong transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-sm"
+            className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-surface-card border border-hairline-strong text-xs font-semibold text-body hover:text-ink hover:bg-surface-strong transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-sm"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            New
+            <span className="hidden sm:inline">New</span>
           </button>
         </div>
       </div>
@@ -530,7 +530,7 @@ export default function AskPage() {
         </div>
       </div>
 
-      <div className="shrink-0 px-6 md:px-12 py-5 border-t border-hairline pb-24 md:pb-6 bg-canvas/80 backdrop-blur-md relative z-10">
+      <div className="shrink-0 px-4 sm:px-6 md:px-12 pt-4 pb-4 sm:py-5 border-t border-hairline bg-canvas/80 backdrop-blur-md relative z-10">
         <div className="max-w-3xl mx-auto flex items-center gap-3">
           <input
             type="text"
