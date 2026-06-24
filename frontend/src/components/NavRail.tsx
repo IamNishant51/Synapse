@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useIngestion } from "@/context/IngestionContext";
 
@@ -19,16 +20,15 @@ export default function NavRail() {
   return (
     <aside className="fixed bottom-0 md:top-0 left-0 z-40 flex w-full h-14 md:h-full md:w-56 flex-row md:flex-col bg-canvas border-t md:border-t-0 md:border-r border-hairline">
       {/* Brand */}
-      <div className="hidden md:flex items-center gap-2.5 px-5 pt-5 pb-6">
-        <div className="flex items-center justify-center w-7 h-7 rounded-full bg-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="8" stroke="white" strokeWidth="2"/>
-            <circle cx="12" cy="12" r="3" fill="white"/>
-          </svg>
-        </div>
-        <span className="text-[15px] font-medium tracking-tight text-ink" style={{ fontFamily: "'EB Garamond', serif", fontWeight: 400, fontSize: "18px" }}>
-          Synapse
-        </span>
+      <div className="hidden md:flex items-center px-5 pt-5 pb-6">
+        <Image
+          src="/synapse-logo.png"
+          alt="Synapse"
+          width={96}
+          height={28}
+          priority
+          className="object-contain"
+        />
       </div>
 
       {/* Nav links */}

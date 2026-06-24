@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [password, setPassword] = useState("");
@@ -43,17 +44,15 @@ export default function LoginPage() {
       <div className="w-full max-w-sm rounded-2xl border border-hairline bg-surface-card p-8 shadow-[0_4px_16px_rgba(0,0,0,0.04)] relative z-10">
         <div className="flex flex-col items-center mb-8">
           {/* Logo */}
-          <div className="w-12 h-12 rounded-full border border-hairline flex items-center justify-center bg-canvas mb-4">
-            <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
-              <circle cx="14" cy="14" r="13" stroke="#292524" strokeWidth="1.5"/>
-              <circle cx="14" cy="14" r="4" fill="#292524"/>
-              <line x1="14" y1="5" x2="14" y2="10" stroke="#292524" strokeWidth="1.2"/>
-              <line x1="14" y1="18" x2="14" y2="23" stroke="#292524" strokeWidth="1.2"/>
-              <line x1="5" y1="14" x2="10" y2="14" stroke="#292524" strokeWidth="1.2"/>
-              <line x1="18" y1="14" x2="23" y2="14" stroke="#292524" strokeWidth="1.2"/>
-            </svg>
-          </div>
-          <h1 className="display-sm text-ink">Synapse</h1>
+          <Image
+            src="/synapse-logo.png"
+            alt="Synapse"
+            width={160}
+            height={46}
+            priority
+            className="object-contain mb-1"
+          />
+          <h1 className="sr-only">Synapse</h1>
           <p className="mt-1 text-sm text-muted" style={{ letterSpacing: "0.15px" }}>Enter your access key to continue</p>
         </div>
 

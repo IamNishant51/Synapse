@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -112,18 +113,15 @@ export default function LandingPage() {
       {/* ═══════ TOP NAVIGATION ═══════ */}
       <nav className="sticky top-0 z-50 bg-canvas/80 backdrop-blur-md border-b border-hairline">
         <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 fade-up">
-            {/* Synapse logo — clean editorial circle */}
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <circle cx="14" cy="14" r="13" stroke="#292524" strokeWidth="1.5"/>
-              <circle cx="14" cy="14" r="4" fill="#292524"/>
-              <line x1="14" y1="5" x2="14" y2="10" stroke="#292524" strokeWidth="1.2"/>
-              <line x1="14" y1="18" x2="14" y2="23" stroke="#292524" strokeWidth="1.2"/>
-              <line x1="5" y1="14" x2="10" y2="14" stroke="#292524" strokeWidth="1.2"/>
-              <line x1="18" y1="14" x2="23" y2="14" stroke="#292524" strokeWidth="1.2"/>
-            </svg>
-            <span style={{ fontFamily: "'EB Garamond', serif", fontSize: "20px", fontWeight: 400, letterSpacing: "-0.3px" }}
-              className="text-ink">Synapse</span>
+          <div className="fade-up">
+            <Image
+              src="/synapse-logo.png"
+              alt="Synapse"
+              width={110}
+              height={32}
+              priority
+              className="object-contain"
+            />
           </div>
 
           <div className="flex items-center gap-5 fade-up">
@@ -429,13 +427,13 @@ export default function LandingPage() {
       {/* ═══════ FOOTER ═══════ */}
       <footer className="relative z-10 border-t border-hairline bg-canvas" style={{ padding: "64px 48px" }}>
         <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-              <circle cx="14" cy="14" r="13" stroke="#292524" strokeWidth="1.5"/>
-              <circle cx="14" cy="14" r="4" fill="#292524"/>
-            </svg>
-            <span style={{ fontFamily: "'EB Garamond', serif", fontSize: "16px" }} className="text-body">Synapse</span>
-          </div>
+          <Image
+            src="/synapse-logo.png"
+            alt="Synapse"
+            width={84}
+            height={24}
+            className="object-contain"
+          />
           <p className="text-[15px] text-body" style={{ letterSpacing: "0.15px" }}>
             Built for WeMakeDevs × Cognee Hackathon 2026
           </p>
