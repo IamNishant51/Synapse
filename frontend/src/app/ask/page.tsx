@@ -295,8 +295,11 @@ export default function AskPage() {
                           </p>
                         </div>
                         <button
-                          onClick={(e) => deleteConversation(conv.id, e)}
-                          className="ml-2 p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-surface-strong/80 text-muted hover:text-semantic-error transition-all duration-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteConversation(conv.id);
+                          }}
+                          className="ml-2 p-1.5 rounded-md opacity-40 group-hover:opacity-70 hover:opacity-100 hover:bg-surface-strong/80 text-muted hover:text-semantic-error transition-all duration-100"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

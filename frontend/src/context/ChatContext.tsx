@@ -23,7 +23,7 @@ interface ChatContextType {
   handleSubmit: (query?: string) => Promise<void>;
   newConversation: () => void;
   switchToConversation: (convId: string) => void;
-  deleteConversation: (convId: string, e: React.MouseEvent) => void;
+  deleteConversation: (convId: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -145,8 +145,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     setShowHistory(false);
   }, [messages, saveCurrentToHistory]);
 
-  const deleteConversation = useCallback((convId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const deleteConversation = useCallback((convId: string) => {
     deleteConvMessages(convId);
     const convs = getConvIndex();
     const updatedConvs = convs.filter(c => c.id !== convId);

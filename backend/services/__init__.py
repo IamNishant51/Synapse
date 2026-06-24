@@ -858,6 +858,19 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
                 if commits_ctx:
                     graph_ctx_lines.append(commits_ctx)
 
+    # If the user is asking about tech stack changes, project updates, or conflicts, inject the conflict records
+    change_keywords = {"changed", "change", "changes", "tech", "stack", "project", "db", "database", "auth", "conflict", "conflicts", "reconciliation", "march", "since"}
+    if any(k in query for k in change_keywords):
+        if db_conflicts:
+            graph_ctx_lines.append("\n[Active Tech Stack Conflicts & Decisions:]")
+            for c in db_conflicts:
+                graph_ctx_lines.append(
+                    f"- Topic: {c.topic}\n"
+                    f"  Old Belief: {c.oldNodeSummary} (Source: {c.oldNodeSource}, Date: {c.oldNodeDate})\n"
+                    f"  New Belief: {c.newNodeSummary} (Source: {c.newNodeSource}, Date: {c.newNodeDate})\n"
+                    f"  Status: {c.status} ({c.relationship})"
+                )
+
     # Enrich with Cognee recall results from the actual graph
     if COGNEE_READY:
         try:
