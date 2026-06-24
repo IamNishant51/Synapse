@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect } from "react";
 import EmptyState from "@/components/EmptyState";
 import SourcePill from "@/components/SourcePill";
-import { answerQuery } from "@/lib/api";
+import { useChat } from "@/context/ChatContext";
 import type { ChatMessage, DiffCard, TimelinePoint } from "@/lib/types";
 
 const promptChips = [
@@ -11,65 +11,6 @@ const promptChips = [
   "What did I believe about databases before vs now?",
   "Why did I decide to switch from Postgres to Supabase?",
 ];
-
-interface ConversationMeta {
-  id: string;
-  title: string;
-  updatedAt: string;
-  messageCount: number;
-}
-
-const CUR_KEY = "ask-messages";
-const CONV_INDEX_KEY = "ask-conv-index";
-
-function saveMessagesRaw(msgs: ChatMessage[]) {
-  try { localStorage.setItem(CUR_KEY, JSON.stringify(msgs)); } catch {}
-}
-
-function loadMessagesRaw(): ChatMessage[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const stored = localStorage.getItem(CUR_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch { return []; }
-}
-
-function getConvIndex(): ConversationMeta[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(CONV_INDEX_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-function persistConvIndex(list: ConversationMeta[]) {
-  try { localStorage.setItem(CONV_INDEX_KEY, JSON.stringify(list)); } catch {}
-}
-
-function convMsgKey(id: string) {
-  return `ask-conv-${id}`;
-}
-
-function saveConvMessages(id: string, msgs: ChatMessage[]) {
-  try { localStorage.setItem(convMsgKey(id), JSON.stringify(msgs)); } catch {}
-}
-
-function loadConvMessages(id: string): ChatMessage[] | null {
-  try {
-    const raw = localStorage.getItem(convMsgKey(id));
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
-function deleteConvMessages(id: string) {
-  try { localStorage.removeItem(convMsgKey(id)); } catch {}
-}
-
-function generateTitle(msgs: ChatMessage[]): string {
-  if (msgs.length === 0) return "Empty conversation";
-  const first = msgs[0].query;
-  return first.length > 45 ? first.slice(0, 42) + "..." : first;
-}
 
 function DiffCardView({ diff }: { diff: DiffCard }) {
   return (
@@ -268,23 +209,24 @@ function parseMarkdown(text: string) {
 }
 
 export default function AskPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [convIndex, setConvIndex] = useState<ConversationMeta[]>([]);
+  const {
+    messages,
+    input,
+    setInput,
+    isProcessing,
+    showHistory,
+    setShowHistory,
+    convIndex,
+    handleSubmit,
+    newConversation,
+    switchToConversation,
+    deleteConversation,
+  } = useChat();
+
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const epochRef = useRef(0);
-  const abortRef = useRef<AbortController | null>(null);
   const historyRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const isFirstRender = useRef(true);
-
-  useEffect(() => {
-    const saved = loadMessagesRaw();
-    if (saved.length > 0) setMessages(saved);
-    setConvIndex(getConvIndex());
-  }, []);
 
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -302,21 +244,6 @@ export default function AskPage() {
   }, [messages]);
 
   useEffect(() => {
-    saveMessagesRaw(messages);
-  }, [messages]);
-
-  useEffect(() => {
-    persistConvIndex(convIndex);
-  }, [convIndex]);
-
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-      abortRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (historyRef.current && !historyRef.current.contains(e.target as Node)) {
         setShowHistory(false);
@@ -324,88 +251,7 @@ export default function AskPage() {
     };
     if (showHistory) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [showHistory]);
-
-  const saveCurrentToHistory = useCallback(() => {
-    if (messages.length === 0) return null;
-    const convId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    saveConvMessages(convId, messages);
-    const convs = getConvIndex();
-    convs.unshift({
-      id: convId,
-      title: generateTitle(messages),
-      updatedAt: new Date().toISOString(),
-      messageCount: messages.length,
-    });
-    setConvIndex([...convs]);
-    return convId;
-  }, [messages]);
-
-  const newConversation = useCallback(() => {
-    saveCurrentToHistory();
-    setMessages([]);
-    try { localStorage.removeItem(CUR_KEY); } catch {}
-  }, [saveCurrentToHistory]);
-
-  const switchToConversation = useCallback((convId: string) => {
-    saveCurrentToHistory();
-    const stored = loadConvMessages(convId);
-    if (stored) {
-      setMessages(stored);
-    }
-    setConvIndex(prev => prev.filter(c => c.id !== convId));
-    setShowHistory(false);
-  }, [saveCurrentToHistory]);
-
-  const deleteConversation = useCallback((convId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    deleteConvMessages(convId);
-    setConvIndex(prev => prev.filter(c => c.id !== convId));
-  }, []);
-
-  const handleSubmit = async (query?: string) => {
-    const q = (query || input).trim();
-    if (!q || isProcessing) return;
-
-    const epoch = ++epochRef.current;
-    setIsProcessing(true);
-    setInput("");
-
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    try {
-      const response = await answerQuery(q, controller.signal);
-      if (epoch !== epochRef.current) return;
-      setMessages((prev) => {
-        const next = [...prev, response];
-        saveMessagesRaw(next);
-        return next;
-      });
-    } catch (e) {
-      if ((e as Error)?.name === "AbortError") return;
-      const msg = e instanceof Error ? e.message : "Failed to get answer";
-      const errorMsg: ChatMessage = {
-        id: Math.random().toString(36).slice(2),
-        query: q,
-        intent: null,
-        answer: `Error: ${msg}. Make sure the backend is running.`,
-        sources: [],
-        diffCard: null,
-        timeline: null,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => {
-        const next = [...prev, errorMsg];
-        saveMessagesRaw(next);
-        return next;
-      });
-    } finally {
-      if (epoch === epochRef.current) {
-        setIsProcessing(false);
-      }
-    }
-  };
+  }, [showHistory, setShowHistory]);
 
   return (
     <div className="h-full flex flex-col bg-canvas relative overflow-hidden selection:bg-gradient-sky/40">
