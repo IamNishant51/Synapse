@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // If the secret is not configured, bypass authentication entirely (e.g. local dev)
   if (!process.env.SYNAPSE_ACCESS_KEY) {
     return NextResponse.next();

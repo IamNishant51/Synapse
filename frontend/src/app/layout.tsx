@@ -17,6 +17,15 @@ const garamond = EB_Garamond({
 export const metadata: Metadata = {
   title: "Synapse — A memory that knows when to update itself",
   description: "A self-organizing personal knowledge graph that ingests everything you read, write, and build — and actively maintains itself.",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+    shortcut: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
