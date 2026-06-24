@@ -277,6 +277,8 @@ export default function AskPage() {
   const epochRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
   const historyRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     const saved = loadMessagesRaw();
@@ -285,7 +287,18 @@ export default function AskPage() {
   }, []);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      if (isFirstRender.current) {
+        container.scrollTop = container.scrollHeight;
+        isFirstRender.current = false;
+      } else {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -462,7 +475,7 @@ export default function AskPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin px-6 md:px-12 py-8 relative z-10">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto scrollbar-thin px-6 md:px-12 py-8 relative z-10">
         {messages.length === 0 && !isProcessing && (
           <div className="h-full flex flex-col items-center justify-center gap-8 py-10">
             <EmptyState
