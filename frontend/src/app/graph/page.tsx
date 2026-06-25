@@ -222,7 +222,7 @@ function GraphLoadingSkeleton() {
 
 export default function GraphPage() {
   const router = useRouter();
-  const { config, openModal, isJudgeAuthorized } = useAIConfig();
+  const { config, loading: loadingAI, openModal, isJudgeAuthorized } = useAIConfig();
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
@@ -239,7 +239,8 @@ export default function GraphPage() {
     }
   }, []);
 
-  const showAIBanner = !loading && config && !config.configured && !isJudgeAuthorized && !isBannerDismissed;
+  const isConnected = !!config?.configured || isJudgeAuthorized;
+  const showAIBanner = !loading && !loadingAI && !isConnected && !isBannerDismissed;
   const [error, setError] = useState<string | null>(null);
   const [conflictCount, setConflictCount] = useState(0);
   const [prevScore] = useState<number | null>(() => {
@@ -614,7 +615,7 @@ export default function GraphPage() {
         {loading && <GraphLoadingSkeleton />}
 
         {showAIBanner && (
-          <div className="absolute top-4 inset-x-4 md:top-6 md:inset-x-6 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 pr-10 sm:pr-4 rounded-xl bg-surface-card/85 border border-primary/20 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.03)] animate-fade-in relative">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-xl md:max-w-2xl z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 pr-10 sm:pr-4 rounded-xl bg-surface-card/85 border border-primary/20 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.03)] animate-fade-in relative">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5 sm:mt-0">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
