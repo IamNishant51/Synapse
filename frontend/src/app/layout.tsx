@@ -20,7 +20,11 @@ export const metadata: Metadata = {
   description: "A self-organizing personal knowledge graph that ingests everything you read, write, and build — and actively maintains itself.",
   manifest: "/site.webmanifest",
   icons: {
-    icon: "/favicon.ico?v=3",
+    icon: [
+      { url: "/favicon-16x16.png?v=3", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png?v=3", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico?v=3", sizes: "any" },
+    ],
     shortcut: "/favicon.ico?v=3",
     apple: "/apple-touch-icon.png?v=3",
   },
