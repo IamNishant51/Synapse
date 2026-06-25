@@ -773,7 +773,7 @@ export default function GraphPage() {
                   )}
                 </span>
               </div>
-              <div className="flex items-center gap-3.5 pointer-events-auto">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3.5 pointer-events-auto mt-2 md:mt-0">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-confidence-fresh" />
                   <span className="text-xs text-body font-medium">Fresh</span>
@@ -786,10 +786,10 @@ export default function GraphPage() {
                   <span className="w-2.5 h-2.5 rounded-full bg-confidence-stale" />
                   <span className="text-xs text-body font-medium">Stale</span>
                 </div>
-                <div className="w-px h-3 bg-hairline mx-1" />
+                <div className="hidden sm:block w-px h-3 bg-hairline mx-1" />
                 <button
                   onClick={() => setUse2d(!use2d)}
-                  className="text-[10px] uppercase tracking-wider text-body font-bold hover:text-primary transition-colors cursor-pointer select-none"
+                  className="text-[10px] uppercase tracking-wider text-body font-bold hover:text-primary transition-colors cursor-pointer select-none bg-surface-strong/60 px-2.5 py-1 rounded-md sm:bg-transparent sm:p-0"
                 >
                   {use2d ? "Switch to 3D" : "Switch to 2D"}
                 </button>
