@@ -23,11 +23,94 @@ const SectionLabel = ({ text, color = "bg-[#f4c5a8]" }: { text: string; color?: 
   </div>
 );
 
+const BrowserChrome = ({ children, className = "", url = "localhost:3000" }: { children: React.ReactNode; className?: string; url?: string }) => (
+  <div className={`w-full bg-[#f5f5f5] rounded-2xl border border-[#e7e5e4] shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden ${className}`}>
+    <div className="bg-[#f0efed] px-4 py-2.5 border-b border-[#e7e5e4] flex items-center gap-1.5 select-none pointer-events-none">
+      <div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]/40" />
+      <div className="w-2.5 h-2.5 rounded-full bg-[#eab308]/40" />
+      <div className="w-2.5 h-2.5 rounded-full bg-[#22c55e]/40" />
+      <div className="h-4.5 bg-white/60 border border-[#e7e5e4] rounded-md text-[9px] text-[#777169] px-4 ml-4 flex items-center flex-1 max-w-[240px] font-mono tracking-tight overflow-hidden text-ellipsis whitespace-nowrap">
+        {url}
+      </div>
+    </div>
+    <div className="relative bg-white w-full">
+      {children}
+    </div>
+  </div>
+);
+
+const FAQItem = ({ question, answer, isOpen, onClick }: { question: string; answer: string; isOpen: boolean; onClick: () => void }) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      if (isOpen) {
+        gsap.to(contentRef.current, { height: "auto", opacity: 1, duration: 0.35, ease: "power2.out" });
+      } else {
+        gsap.to(contentRef.current, { height: 0, opacity: 0, duration: 0.3, ease: "power2.in" });
+      }
+    }
+  }, [isOpen]);
+
+  return (
+    <div className="border border-[#e7e5e4] rounded-2xl bg-white overflow-hidden transition-all duration-300">
+      <button
+        onClick={onClick}
+        className="w-full flex items-center justify-between p-6 text-left font-medium text-[#0c0a09] hover:text-[#0c0a09] transition-colors focus:outline-none"
+      >
+        <span className="text-base font-medium">{question}</span>
+        <svg
+          className={`w-5 h-5 text-[#777169] transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        </svg>
+      </button>
+      <div
+        ref={contentRef}
+        style={{ height: 0, opacity: 0 }}
+        className="overflow-hidden"
+      >
+        <div className="px-6 pb-6 text-sm text-[#4e4e4e] leading-relaxed border-t border-[#e7e5e4]/50 pt-4">
+          {answer}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const faqs = [
+  {
+    q: "Is this just RAG with extra steps?",
+    a: "No. Traditional RAG relies on pure semantic similarity search over passive text embeddings, which doesn't handle evolving contexts or direct contradictions. Synapse uses Cognee to construct a structured metadata knowledge graph that acts as a deterministic memory layer. It proactively detects factual conflicts at ingestion, giving you structured, reconcilable state updates rather than just appending text."
+  },
+  {
+    q: "What happens to old beliefs when they're superseded?",
+    a: "When a conflict is resolved in favor of 'Keep New', the older belief node is deactivated and deprecated in the graph, with its confidence score set to 0. The transaction history is saved in the reconciliation log database, allowing you to run query diffs like 'what changed since March' to trace the precise evolution of your tech stack or design decisions."
+  },
+  {
+    q: "Does this work with my specific tools?",
+    a: "Yes. Synapse supports raw context ingestion from multiple common developer and researcher sources, including PDF files, GitHub commit histories, pasted ChatGPT/Claude conversation exports, web articles, and YouTube transcripts."
+  },
+  {
+    q: "Is my data sent to third-party services?",
+    a: "No, unless you configure an external LLM provider. Synapse runs its metadata reconciliation pipelines using either Google Gemini or Groq API wrappers based on your local .env configuration. All other metadata, reconciliation history logs, and access control lists are stored entirely locally in a lightweight SQLite database file."
+  },
+  {
+    q: "Open source or hosted?",
+    a: "Synapse is fully open-source and built for local deployment, designed specifically to showcase the capabilities of the Cognee memory lifecycle APIs as a developer utility."
+  }
+];
+
 export default function LandingPage() {
   const router = useRouter();
   const [entering, setEntering] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
 
@@ -123,32 +206,6 @@ export default function LandingPage() {
         .to(".fade-up", { y: 0, opacity: 1, stagger: 0.1, duration: 0.9, delay: 0.1 })
         .to(".scroll-cue", { opacity: 0.6, duration: 0.5 }, "-=0.3");
 
-      // Slow looping background orb drift
-      gsap.to(".hero-orb-1", {
-        y: "30px",
-        x: "15px",
-        duration: 12,
-        yoyo: true,
-        repeat: -1,
-        ease: "sine.inOut"
-      });
-      gsap.to(".hero-orb-2", {
-        y: "-20px",
-        x: "-30px",
-        duration: 10,
-        yoyo: true,
-        repeat: -1,
-        ease: "sine.inOut"
-      });
-      gsap.to(".hero-orb-3", {
-        y: "25px",
-        x: "-10px",
-        duration: 14,
-        yoyo: true,
-        repeat: -1,
-        ease: "sine.inOut"
-      });
-
       // Hide scroll cue on scroll
       gsap.to(".scroll-cue", {
         opacity: 0,
@@ -176,14 +233,14 @@ export default function LandingPage() {
         }
       });
 
-      /* ── Section 4: Ingestion Stepper & Spiral ── */
       const ingestTl = gsap.timeline({
         scrollTrigger: {
           trigger: "#section-ingest",
           pin: isDesktop,
-          start: isDesktop ? "top top" : "top 80%",
+          start: isDesktop ? "top top" : "top 95%",
           end: isDesktop ? "+=1800" : "bottom 20%",
-          scrub: 0.5,
+          scrub: isDesktop ? 0.5 : false,
+          toggleActions: isDesktop ? "none" : "play none none reverse",
           anticipatePin: isDesktop ? 1 : 0
         }
       });
@@ -217,51 +274,57 @@ export default function LandingPage() {
         }, time);
       });
 
-      /* ── Section 5: What Changed - Meniscus Fusing & Diff UI ── */
       const resolveTl = gsap.timeline({
         scrollTrigger: {
           trigger: "#section-resolve",
           pin: isDesktop,
-          start: isDesktop ? "top top" : "top 80%",
+          start: isDesktop ? "top top" : "top 95%",
           end: isDesktop ? "+=2200" : "bottom 20%",
-          scrub: 0.5,
+          scrub: isDesktop ? 0.5 : false,
+          toggleActions: isDesktop ? "none" : "play none none reverse",
           anticipatePin: isDesktop ? 1 : 0
         }
       });
 
       // 1. Gold droplet fades in
-      resolveTl.fromTo("#droplet-gold", { opacity: 0, scale: 0.6 }, { opacity: 0.8, scale: 1, duration: 0.5 });
-      resolveTl.fromTo("#droplet-gold-label", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3 }, "-=0.2");
+      resolveTl.fromTo("#droplet-gold", { opacity: 0, scale: 0.6 }, { opacity: 0.8, scale: 1, duration: isDesktop ? 0.5 : 0.2 });
+      resolveTl.fromTo("#droplet-gold-label", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: isDesktop ? 0.3 : 0.15 }, "-=0.2");
 
       // 2. Smoke droplet slides in and fuses
       resolveTl.fromTo("#droplet-smoke", 
         { opacity: 0, scale: 0.6, x: 100 }, 
-        { opacity: 0.8, scale: 1, x: 0, duration: 0.7, ease: "power2.out" }
+        { opacity: 0.8, scale: 1, x: 0, duration: isDesktop ? 0.7 : 0.3, ease: "power2.out" }
       );
-      resolveTl.fromTo("#droplet-smoke-label", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3 }, "-=0.3");
+      resolveTl.fromTo("#droplet-smoke-label", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: isDesktop ? 0.3 : 0.15 }, "-=0.3");
 
       // 3. Meniscus flash pulse at overlap
-      resolveTl.fromTo("#droplet-flash", { opacity: 0 }, { opacity: 1, duration: 0.15 })
-               .to("#droplet-flash", { opacity: 0, duration: 0.25 });
-      resolveTl.fromTo("#conflict-badge", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.2 }, "-=0.3");
+      resolveTl.fromTo("#droplet-flash", { opacity: 0 }, { opacity: 1, duration: isDesktop ? 0.15 : 0.1 })
+               .to("#droplet-flash", { opacity: 0, duration: isDesktop ? 0.25 : 0.15 });
+      resolveTl.fromTo("#conflict-badge", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: isDesktop ? 0.2 : 0.1 }, "-=0.3");
 
       // 4. Compare UI card fades in on left
-      resolveTl.fromTo("#compare-ui-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5 });
+      resolveTl.fromTo("#compare-ui-card", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: isDesktop ? 0.5 : 0.25 }, isDesktop ? undefined : 0.1);
       
       // Pulse Keep New button
-      resolveTl.to("#btn-keep-new", { scale: 1.05, boxShadow: "0 0 12px rgba(41,37,36,0.15)", duration: 0.2 })
-               .to("#btn-keep-new", { scale: 1, boxShadow: "none", duration: 0.2 });
+      resolveTl.to("#btn-keep-new", { scale: 1.05, boxShadow: "0 0 12px rgba(41,37,36,0.15)", duration: isDesktop ? 0.2 : 0.1 })
+               .to("#btn-keep-new", { scale: 1, boxShadow: "none", duration: isDesktop ? 0.2 : 0.1 });
 
       // 5. Diff details reveal
-      resolveTl.fromTo("#diff-card", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5 });
+      resolveTl.fromTo("#diff-card", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: isDesktop ? 0.5 : 0.25 }, isDesktop ? undefined : 0.2);
 
-      /* ── Section 6: Memory Decay ── */
+      // 6. Screenshot slide-in
+      resolveTl.fromTo("#resolve-screenshot-wrapper", 
+        { opacity: 0, y: 40, scale: 0.95 }, 
+        { opacity: 1, y: 0, scale: 1, duration: isDesktop ? 0.6 : 0.3, ease: "power2.out" }, isDesktop ? undefined : 0.3
+      );
+
       const decayTl = gsap.timeline({
         scrollTrigger: {
           trigger: "#section-decay",
-          start: "top 75%",
+          start: isDesktop ? "top 75%" : "top 95%",
           end: "bottom 75%",
-          scrub: 1
+          scrub: isDesktop ? 1 : false,
+          toggleActions: isDesktop ? "none" : "play none none reverse"
         }
       });
 
@@ -321,7 +384,7 @@ export default function LandingPage() {
       });
       gsap.set(".pipeline-label-1, .pipeline-label-2, .pipeline-label-3, .pipeline-label-4", { opacity: 1 });
       gsap.set(".pipeline-desc-1, .pipeline-desc-2, .pipeline-desc-3, .pipeline-desc-4", { opacity: 1 });
-      gsap.set("#droplet-gold, #droplet-smoke, #compare-ui-card, #diff-card", { opacity: 0.9, scale: 1, x: 0 });
+      gsap.set("#droplet-gold, #droplet-smoke, #compare-ui-card, #diff-card, #resolve-screenshot-wrapper", { opacity: 0.9, scale: 1, x: 0 });
       gsap.set("#decay-bar-postgres", { width: "12%" });
       gsap.set("#decay-bar-supabase", { width: "95%" });
     });
@@ -393,54 +456,130 @@ export default function LandingPage() {
       </nav>
 
       {/* ═══════ 2 · HERO (Soft overlap blurred background) ═══════ */}
-      <section id="hero" className="relative z-10 max-w-[1200px] mx-auto px-6 pt-36 pb-24 min-h-[85vh] grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
-        
-        {/* Soft radial-gradient background blooms */}
-        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-[0.12]">
-          <div className="hero-orb-1 absolute top-[-10%] left-[20%] w-[550px] h-[550px] rounded-full filter blur-[100px] bg-gradient-to-r from-[#a7e5d3] to-[#c8b8e0]" />
-          <div className="hero-orb-2 absolute top-[20%] right-[10%] w-[500px] h-[500px] rounded-full filter blur-[110px] bg-gradient-to-r from-[#f4c5a8] to-[#e8b8c4]" />
-          <div className="hero-orb-3 absolute bottom-[10%] left-[5%] w-[450px] h-[450px] rounded-full filter blur-[90px] bg-gradient-to-r from-[#a8c8e8] to-[#c8b8e0]" />
-        </div>
+      <section id="hero" className="relative z-10 w-full min-h-screen flex items-center justify-center pt-28 pb-20">
+        <div className="max-w-[1200px] mx-auto px-6 w-full grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
+          
+          <div className="flex flex-col items-center text-center md:items-start md:text-left md:col-span-7 relative z-10 w-full">
+            <h1 className="fade-up display-mega text-[#0c0a09] mb-8 leading-[1.05] tracking-[-1.92px]" style={{ fontWeight: 300 }}>
+              Memory that knows when it&apos;s wrong.
+            </h1>
 
-        <div className="flex flex-col items-start text-left md:col-span-7 relative z-10">
-          <h1 className="fade-up display-mega text-[#0c0a09] mb-8 leading-[1.05] tracking-[-1.92px]" style={{ fontWeight: 300 }}>
-            Memory that knows when it&apos;s wrong.
-          </h1>
+            <p className="fade-up text-[#4e4e4e] text-sm md:text-base leading-relaxed max-w-xl mb-10 tracking-[0.16px]">
+              Ingest scattered notes from ChatGPT, GitHub, PDFs, and more. Synapse actively reconciles conflicting facts, prunes unreinforced paths, and structures your personal knowledge graph.
+            </p>
 
-          <p className="fade-up text-[#4e4e4e] text-base leading-relaxed max-w-xl mb-10 tracking-[0.16px]">
-            Ingest scattered notes from ChatGPT, GitHub, PDFs, and more. Synapse actively reconciles conflicting facts, prunes unreinforced paths, and structures your personal knowledge graph.
-          </p>
-
-          <div className="fade-up flex items-center gap-4">
-            <button onClick={enter} disabled={entering}
-              className="px-6 py-3 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-[#0c0a09] transition-all duration-300 cursor-pointer disabled:opacity-50">
-              {entering ? "Opening…" : "Open the App"}
-            </button>
-            <a href="https://github.com/IamNishant51/Synapse----Ai-" target="_blank" rel="noreferrer"
-              className="px-6 py-3 rounded-full border border-[#d6d3d1] text-[15px] font-medium text-[#0c0a09] hover:bg-[#f0efed] transition-all duration-300 cursor-pointer">
-              View on GitHub
-            </a>
+            <div className="fade-up flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 w-full sm:w-auto">
+              <button onClick={enter} disabled={entering}
+                className="px-6 py-3 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-[#0c0a09] transition-all duration-300 cursor-pointer disabled:opacity-50 w-full sm:w-auto text-center justify-center flex">
+                {entering ? "Opening…" : "Open the App"}
+              </button>
+              <a href="https://github.com/IamNishant51/Synapse----Ai-" target="_blank" rel="noreferrer"
+                className="px-6 py-3 rounded-full border border-[#d6d3d1] text-[15px] font-medium text-[#0c0a09] hover:bg-[#f0efed] transition-all duration-300 cursor-pointer w-full sm:w-auto text-center justify-center flex">
+                View on GitHub
+              </a>
+            </div>
           </div>
-        </div>
 
-        {/* Editorial Layout Asymmetric Right Column */}
-        <div className="fade-up md:col-span-5 hidden md:flex flex-col items-end text-right border-l border-[#e7e5e4] pl-10 py-8 gap-8 relative z-10 self-center">
-          <SparkleIcon className="w-8 h-8 text-[#292524]/20 mr-2" />
-          <div className="space-y-2">
-            <div className="text-[11px] font-mono tracking-widest text-[#777169] uppercase">STRUCTURED METADATA</div>
-            <div className="font-serif text-2xl text-[#292524] italic leading-tight">reconcile()<br />forget()<br />remember()</div>
+          {/* Editorial Layout Asymmetric Right Column */}
+          <div className="fade-up md:col-span-5 hidden md:flex flex-col items-end text-right border-l border-[#e7e5e4] pl-10 py-8 gap-8 relative z-10 self-center">
+            <SparkleIcon className="w-8 h-8 text-[#292524]/20 mr-2" />
+            <div className="space-y-2">
+              <div className="text-[11px] font-mono tracking-widest text-[#777169] uppercase">STRUCTURED METADATA</div>
+              <div className="font-serif text-2xl text-[#292524] italic leading-tight">reconcile()<br />forget()<br />remember()</div>
+            </div>
+            <div className="text-xs text-[#777169] leading-relaxed max-w-[200px]">
+              Built as a real-time memory dashboard on top of Cognee&apos;s semantic engine.
+            </div>
           </div>
-          <div className="text-xs text-[#777169] leading-relaxed max-w-[200px]">
-            Built as a real-time memory dashboard on top of Cognee&apos;s semantic engine.
-          </div>
+
         </div>
 
         {/* Animated Scroll Cue */}
-        <div className="scroll-cue absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-default select-none pointer-events-none opacity-60">
+        <div className="scroll-cue absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-default select-none pointer-events-none opacity-60 z-20">
           <span className="caption-uppercase tracking-[0.15em] text-[10px] text-[#777169]">SCROLL STORY</span>
           <svg className="w-4 h-4 animate-bounce text-[#777169]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
           </svg>
+        </div>
+      </section>
+
+      {/* ═══════ 2.5 · HOW IT WORKS WALKTHROUGH ═══════ */}
+      <section id="how-it-works" className="relative z-10 py-20 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {[
+              {
+                num: "01",
+                label: "INGEST",
+                title: "Ingest Context",
+                desc: "Connect scattered repositories, chat sessions, articles, and PDFs natively.",
+                color: "bg-[#a7e5d3]/10 text-[#0f766e] border-[#a7e5d3]/30",
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                )
+              },
+              {
+                num: "02",
+                label: "RECONCILE",
+                title: "Reconcile Beliefs",
+                desc: "Synapse detects conflicts at ingestion and surfaces them for quick resolution.",
+                color: "bg-[#f4c5a8]/10 text-[#c2410c] border-[#f4c5a8]/30",
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                )
+              },
+              {
+                num: "03",
+                label: "RECALL",
+                title: "Recall Grounded",
+                desc: "Run time-aware query diffs grounded dynamically on your metadata graph.",
+                color: "bg-[#c8b8e0]/10 text-[#6d28d9] border-[#c8b8e0]/30",
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                )
+              },
+              {
+                num: "04",
+                label: "DECAY",
+                title: "Decay Stale Nodes",
+                desc: "Unreinforced memories fade over time and get pruned dynamically.",
+                color: "bg-[#a8c8e8]/10 text-[#1d4ed8] border-[#a8c8e8]/30",
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )
+              }
+            ].map((step) => (
+              <div 
+                key={step.num} 
+                className="relative group p-8 rounded-2xl bg-[#fafafa]/80 border border-[#e7e5e4] hover:border-[#0c0a09]/50 hover:bg-white hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:-translate-y-0.5 transition-all duration-500 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-8">
+                    <span className="text-[10px] font-mono font-semibold text-[#777169] tracking-widest bg-[#f0efed] px-2.5 py-1 rounded">
+                      {step.num} / {step.label}
+                    </span>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${step.color}`}>
+                      {step.icon}
+                    </div>
+                  </div>
+                  <h3 className="text-base font-serif font-medium text-[#0c0a09] mb-2 leading-tight">
+                    {step.title}
+                  </h3>
+                  <p className="text-xs text-[#777169] leading-relaxed">
+                    {step.desc}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -455,6 +594,16 @@ export default function LandingPage() {
             <p className="text-[#4e4e4e] text-base leading-relaxed max-w-lg mb-8 tracking-[0.16px]">
               Decisions are made in ChatGPT. Framework specs are on GitHub. Research is stored in PDFs. Plain vector stores treat them as isolated strings. Synapse brings them together, structuring relationships dynamically.
             </p>
+            <div className="mt-8 pt-8 border-t border-[#e7e5e4] flex gap-12 select-none">
+              <div>
+                <div className="text-3xl font-mono font-light text-[#292524]">12+</div>
+                <div className="text-[10px] uppercase tracking-wider text-[#777169] font-semibold mt-1">Disjointed Tools</div>
+              </div>
+              <div>
+                <div className="text-3xl font-mono font-light text-[#ca8a04]">0</div>
+                <div className="text-[10px] uppercase tracking-wider text-[#777169] font-semibold mt-1">Shared Context</div>
+              </div>
+            </div>
           </div>
 
           {/* Scattered Source-Cards Mockup Frame */}
@@ -462,69 +611,69 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-[radial-gradient(#8080800a_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
             
             {/* Card 1: ChatGPT */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-5 py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-3 absolute top-[10%] left-[8%] rotate-[-4deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524]">
+            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[5%] left-[4%] md:top-[10%] md:left-[8%] rotate-[-4deg] hover:border-[#d6d3d1] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <path d="M12 2v20M17 5H7M19 12H5M17 19H7M21 9l-18 6M3 9l18 6" />
                 <circle cx="12" cy="12" r="3" className="fill-[#f5f5f5]" />
               </svg>
-              <span className="text-xs font-semibold text-[#292524] tracking-[0.16px]">ChatGPT Export</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">ChatGPT Export</span>
             </div>
 
             {/* Card 2: GitHub */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-5 py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-3 absolute top-[48%] left-[4%] rotate-[3deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524]">
+            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[38%] left-[2%] md:top-[48%] md:left-[4%] rotate-[3deg] hover:border-[#d6d3d1] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
               </svg>
-              <span className="text-xs font-semibold text-[#292524] tracking-[0.16px]">GitHub Commit</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">GitHub Commit</span>
             </div>
 
             {/* Card 3: Notion */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-5 py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-3 absolute top-[78%] left-[12%] rotate-[-5deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524]">
+            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[70%] left-[6%] md:top-[78%] md:left-[12%] rotate-[-5deg] hover:border-[#d6d3d1] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <path d="M12 2L2 7l10 5 10-5-10-5Z" />
                 <path d="M2 17l10 5 10-5" />
               </svg>
-              <span className="text-xs font-semibold text-[#292524] tracking-[0.16px]">Notion Notes</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">Notion Notes</span>
             </div>
 
             {/* Card 4: Claude */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-5 py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-3 absolute top-[22%] right-[10%] rotate-[6deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <SparkleIcon className="w-[18px] h-[18px] text-[#292524]" />
-              <span className="text-xs font-semibold text-[#292524] tracking-[0.16px]">Claude Session</span>
+            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[18%] right-[4%] md:top-[22%] md:right-[10%] rotate-[6deg] hover:border-[#d6d3d1] transition-colors duration-150">
+              <SparkleIcon className="w-3.5 h-3.5 md:w-[18px] md:h-[18px] text-[#292524]" />
+              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">Claude Session</span>
             </div>
 
             {/* Card 5: PDFs */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-5 py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-3 absolute top-[52%] right-[22%] rotate-[-2deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524]">
+            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[48%] right-[18%] md:top-[52%] md:right-[22%] rotate-[-2deg] hover:border-[#d6d3d1] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
               </svg>
-              <span className="text-xs font-semibold text-[#292524] tracking-[0.16px]">specs.pdf</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">specs.pdf</span>
             </div>
 
             {/* Card 6: Articles */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-5 py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-3 absolute top-[76%] right-[8%] rotate-[3deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524]">
+            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[72%] right-[4%] md:top-[76%] md:right-[8%] rotate-[3deg] hover:border-[#d6d3d1] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                 <path d="M16 8h2M16 12h2" />
               </svg>
-              <span className="text-xs font-semibold text-[#292524] tracking-[0.16px]">Web Article</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">Web Article</span>
             </div>
 
             {/* Card 7: YouTube */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-5 py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-3 absolute top-[36%] left-[40%] rotate-[-1deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524]">
+            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[30%] left-[32%] md:top-[36%] md:left-[40%] rotate-[-1deg] hover:border-[#d6d3d1] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <rect x="2" y="3" width="20" height="18" rx="5" ry="5" />
                 <polygon points="10 8 16 12 10 16 10 8" />
               </svg>
-              <span className="text-xs font-semibold text-[#292524] tracking-[0.16px]">YouTube Audio</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">YouTube Audio</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* ═══════ 4 · INGESTION AND STAGES PIPELINE (Pinned, Ingestion Spiral) ═══════ */}
-      <section id="section-ingest" className="relative z-10 w-full min-h-screen bg-[#f5f5f5] flex items-center border-t border-[#e7e5e4]">
+      <section id="section-ingest" className="relative z-10 w-full min-h-fit md:min-h-screen bg-[#f5f5f5] flex items-center border-t border-[#e7e5e4]">
         <div className="max-w-[1200px] mx-auto px-6 w-full py-24 grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
           
           {/* Stepper info list */}
@@ -597,7 +746,7 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ 5 · WHAT CHANGED RECONCILIATION (Pinned droplets, conflict cards) ═══════ */}
-      <section id="section-resolve" className="relative z-10 w-full min-h-screen bg-[#f5f5f5] flex items-center border-t border-[#e7e5e4]">
+      <section id="section-resolve" className="relative z-10 w-full min-h-fit md:min-h-screen bg-[#f5f5f5] flex items-center border-t border-[#e7e5e4]">
         <div className="max-w-[1200px] mx-auto px-6 w-full py-24 grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
           
           {/* Left Column: text details and interactive Compare + Diff card mockups */}
@@ -614,25 +763,25 @@ export default function LandingPage() {
 
             <div className="space-y-6">
               {/* Compare UI Card Mockup */}
-              <div id="compare-ui-card" className="bg-white border border-[#e7e5e4] p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex flex-col opacity-0">
-                <div className="flex items-center justify-between border-b border-[#e7e5e4] pb-4 mb-4">
+              <div id="compare-ui-card" className="bg-white border border-[#e7e5e4] p-5 sm:p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex flex-col opacity-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e7e5e4] pb-4 mb-4">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#e0a328]" />
                     <span className="text-xs font-semibold text-[#0c0a09] tracking-wider uppercase">Resolve Contradiction</span>
                   </div>
-                  <span className="text-[10px] text-[#777169] font-mono">Topic: Canvas Theme</span>
+                  <span className="text-[10px] text-[#777169] font-mono">Topic: Backend Security</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   <div className="bg-canvas-soft border border-[#e7e5e4] p-4 rounded-xl text-left">
                     <span className="text-[9px] uppercase tracking-wider text-[#777169] font-semibold block mb-1">Old belief</span>
-                    <p className="text-xs text-[#292524] font-medium leading-relaxed">&quot;Keep canvas as the only background — dark.&quot;</p>
-                    <span className="text-[9px] text-[#a8a29e] block mt-3">cognee_hackathon.md</span>
+                    <p className="text-xs text-[#292524] font-medium leading-relaxed">&quot;Authentication: basic client-side session checker.&quot;</p>
+                    <span className="text-[9px] text-[#a8a29e] block mt-3">auth_config.md</span>
                   </div>
                   <div className="bg-canvas-soft border border-[#e7e5e4] p-4 rounded-xl text-left">
                     <span className="text-[9px] uppercase tracking-wider text-[#292524] font-semibold block mb-1">New evidence</span>
-                    <p className="text-xs text-[#292524] font-medium leading-relaxed">&quot;The base canvas is off-white (#f5f5f5) canvas.&quot;</p>
-                    <span className="text-[9px] text-[#a8a29e] block mt-3">DESIGN-elevenlabs.md</span>
+                    <p className="text-xs text-[#292524] font-medium leading-relaxed">&quot;Authentication: Tier 1 shared-secret server proxy gate.&quot;</p>
+                    <span className="text-[9px] text-[#a8a29e] block mt-3">AGENTS.md</span>
                   </div>
                 </div>
 
@@ -649,12 +798,12 @@ export default function LandingPage() {
               {/* Diff Card Mockup */}
               <div id="diff-card" className="bg-white border border-[#e7e5e4] p-5 rounded-xl text-left font-mono text-[10px] space-y-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.01)] opacity-0">
                 <div className="flex justify-between border-b border-[#e7e5e4] pb-2 mb-2 font-sans">
-                  <span className="uppercase text-[8px] text-[#777169] font-bold">Diff Result — Canvas Theme</span>
+                  <span className="uppercase text-[8px] text-[#777169] font-bold">Diff Result — Backend Security</span>
                   <span className="text-[8px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full font-semibold">Committed</span>
                 </div>
-                <div className="text-[#dc2626] font-medium">− Dark canvas (#010102)</div>
-                <div className="text-emerald-600 font-medium">+ Off-white (#f5f5f5) canvas</div>
-                <div className="text-emerald-600 font-medium">+ DESIGN-elevenlabs.md specs</div>
+                <div className="text-[#dc2626] font-medium">− Client-side route blocking</div>
+                <div className="text-emerald-600 font-medium">+ Server-side proxy middleware.ts</div>
+                <div className="text-emerald-600 font-medium">+ SYNAPSE_ACCESS_KEY validation</div>
                 <div className="text-[#777169] font-sans text-[9px] pt-1">
                   Reconciliation pass updated active nodes successfully.
                 </div>
@@ -662,10 +811,10 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right Column: Fusing Golden and Smoke droplet visual */}
-          <div className="md:col-span-6 flex flex-col justify-center items-center relative h-[380px] md:h-[480px]">
+          {/* Right Column: Fusing Golden and Smoke droplet visual + Actual UI Screenshot */}
+          <div className="md:col-span-6 flex flex-col justify-center items-center relative h-auto py-8">
             {/* "⚠ Conflict detected" Badge */}
-            <div id="conflict-badge" className="absolute top-[10%] bg-[#fef08a] border border-[#eab308]/40 px-4 py-1.5 rounded-full shadow-[0_4px_12px_rgba(234,179,8,0.1)] flex items-center gap-2 z-20 opacity-0 select-none">
+            <div id="conflict-badge" className="absolute top-[5%] bg-[#fef08a] border border-[#eab308]/40 px-4 py-1.5 rounded-full shadow-[0_4px_12px_rgba(234,179,8,0.1)] flex items-center gap-2 z-20 opacity-0 select-none">
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                 <circle cx="8" cy="8" r="6.5" stroke="#ca8a04" strokeWidth="1.5"/>
                 <path d="M8 5v3.5M8 10.5v.01" stroke="#ca8a04" strokeWidth="1.5" strokeLinecap="round"/>
@@ -674,7 +823,7 @@ export default function LandingPage() {
             </div>
 
             {/* Droplet SVG Canvas */}
-            <svg viewBox="0 0 500 400" className="w-full h-full max-w-[420px] select-none relative z-10">
+            <svg viewBox="0 0 500 350" className="w-full h-full max-w-[420px] select-none relative z-10">
               <defs>
                 <radialGradient id="gold-droplet" cx="35%" cy="35%" r="65%">
                   <stop offset="0%" stopColor="#fef08a" stopOpacity="0.8" />
@@ -696,19 +845,32 @@ export default function LandingPage() {
               </defs>
 
               {/* Gold Droplet */}
-              <circle id="droplet-gold" cx="180" cy="200" r="80" fill="url(#gold-droplet)" className="opacity-0" />
+              <circle id="droplet-gold" cx="180" cy="180" r="80" fill="url(#gold-droplet)" className="opacity-0" />
 
               {/* Smoke Droplet */}
-              <circle id="droplet-smoke" cx="320" cy="200" r="80" fill="url(#smoke-droplet)" className="opacity-0" />
+              <circle id="droplet-smoke" cx="320" cy="180" r="80" fill="url(#smoke-droplet)" className="opacity-0" />
 
               {/* Overlap Flash */}
-              <circle id="droplet-flash" cx="250" cy="200" r="50" fill="url(#intersection-flash)" className="opacity-0" />
+              <circle id="droplet-flash" cx="250" cy="180" r="50" fill="url(#intersection-flash)" className="opacity-0" />
             </svg>
 
             {/* Droplet Captions */}
-            <div className="absolute bottom-[10%] flex justify-between w-[80%] font-mono text-[10px] text-[#777169] select-none pointer-events-none">
+            <div className="absolute top-[52%] flex justify-between w-[80%] font-mono text-[10px] text-[#777169] select-none pointer-events-none">
               <span id="droplet-gold-label" className="opacity-0">Old Belief (Gold)</span>
               <span id="droplet-smoke-label" className="opacity-0">New Evidence (Smoke)</span>
+            </div>
+
+            {/* Real Screenshot with Browser Frame */}
+            <div id="resolve-screenshot-wrapper" className="mt-8 w-full max-w-[460px] opacity-0 relative z-20">
+              <BrowserChrome url="localhost:3000/resolve">
+                <Image
+                  src="/images/resolve_screenshot.jpg"
+                  alt="Synapse Resolve Screen"
+                  width={800}
+                  height={450}
+                  className="w-full h-auto object-cover"
+                />
+              </BrowserChrome>
             </div>
           </div>
         </div>
@@ -785,56 +947,22 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Non-interactive lightweight SVG graph mockup with parallax */}
-          <div className="md:col-span-7 flex justify-center items-center relative h-[260px] sm:h-[320px] md:h-[380px] bg-white/20 border border-[#e7e5e4] rounded-3xl overflow-hidden shadow-[inset_0_2px_8px_rgba(0,0,0,0.01)] select-none">
-            <svg viewBox="0 0 600 400" className="w-full h-full max-w-[500px]">
-              <defs>
-                <linearGradient id="node-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#ffffff" />
-                  <stop offset="100%" stopColor="#f5f3f1" />
-                </linearGradient>
-              </defs>
-              
-              {/* Connection paths */}
-              <g stroke="#d6d3d1" strokeWidth="1" opacity="0.6">
-                <line x1="300" y1="200" x2="180" y2="100" />
-                <line x1="300" y1="200" x2="420" y2="120" />
-                <line x1="300" y1="200" x2="220" y2="300" />
-                <line x1="300" y1="200" x2="380" y2="280" />
-                <line x1="180" y1="100" x2="420" y2="120" />
-                <line x1="220" y1="300" x2="380" y2="280" />
-                <line x1="180" y1="100" x2="220" y2="300" />
-                <line x1="420" y1="120" x2="380" y2="280" />
-              </g>
-
-              {/* Parallax Group 1 (Central Node) */}
-              <g className="graph-node-group-1 cursor-default">
-                <circle cx="300" cy="200" r="32" fill="url(#node-grad)" stroke="#292524" strokeWidth="1.5" />
-                <text x="300" y="203" textAnchor="middle" fill="#0c0a09" fontSize="9" fontWeight="bold" fontFamily="sans-serif">Canvas Theme</text>
-              </g>
-
-              {/* Parallax Group 2 (Ingest & Security) */}
-              <g className="graph-node-group-2 cursor-default">
-                {/* Node Top Left */}
-                <circle cx="180" cy="100" r="26" fill="url(#node-grad)" stroke="#292524" strokeWidth="1" />
-                <text x="180" y="103" textAnchor="middle" fill="#0c0a09" fontSize="8" fontFamily="sans-serif">Security</text>
-
-                {/* Node Bottom Right */}
-                <circle cx="380" cy="280" r="24" fill="url(#node-grad)" stroke="#292524" strokeWidth="1" />
-                <text x="380" y="283" textAnchor="middle" fill="#0c0a09" fontSize="8" fontFamily="sans-serif">API Key</text>
-              </g>
-
-              {/* Parallax Group 3 (Others) */}
-              <g className="graph-node-group-3 cursor-default">
-                {/* Node Top Right */}
-                <circle cx="420" cy="120" r="22" fill="url(#node-grad)" stroke="#292524" strokeWidth="1" />
-                <text x="420" y="123" textAnchor="middle" fill="#0c0a09" fontSize="8" fontFamily="sans-serif">Typography</text>
-
-                {/* Node Bottom Left */}
-                <circle cx="220" cy="300" r="20" fill="url(#node-grad)" stroke="#292524" strokeWidth="1" />
-                <text x="220" y="303" textAnchor="middle" fill="#0c0a09" fontSize="8" fontFamily="sans-serif">Specs</text>
-              </g>
-            </svg>
+          {/* Real Screenshot with Browser Frame */}
+          <div className="md:col-span-7 flex flex-col items-center gap-6 relative">
+            <BrowserChrome url="localhost:3000/graph" className="relative z-10">
+              <Image
+                src="/images/graph_screenshot.jpg"
+                alt="Synapse Metadata Graph Screen"
+                width={800}
+                height={450}
+                className="w-full h-auto object-cover"
+                priority
+              />
+            </BrowserChrome>
+            
+            <div className="absolute -top-4 -right-4 bg-white border border-[#e7e5e4] px-3 py-1 rounded-full text-[10px] font-mono shadow-sm z-20 select-none">
+              Interactive 3D Layer
+            </div>
           </div>
         </div>
       </section>
@@ -878,6 +1006,30 @@ export default function LandingPage() {
                 <p className="text-sm text-white/80 leading-relaxed max-w-md">
                   Ingests PDFs, GitHub repositories, ChatGPT conversational exports, YouTube transcripts, and web articles natively.
                 </p>
+                <div className="flex gap-4 mt-4 bg-white/10 p-3 rounded-xl max-w-sm border border-white/5 backdrop-blur-sm w-fit select-none">
+                  {/* ChatGPT Icon */}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                    <path d="M12 2v20M17 5H7M19 12H5M17 19H7M21 9l-18 6M3 9l18 6" />
+                  </svg>
+                  {/* GitHub Icon */}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+                  </svg>
+                  {/* PDF Icon */}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  {/* Article Icon */}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                  </svg>
+                  {/* YouTube Icon */}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                    <rect x="2" y="3" width="20" height="18" rx="5" ry="5" />
+                    <polygon points="10 8 16 12 10 16 10 8" />
+                  </svg>
+                </div>
               </div>
             </div>
 
@@ -930,7 +1082,7 @@ export default function LandingPage() {
               <div>
                 <h3 className="text-lg font-medium text-[#0c0a09] mb-2 font-serif">3D Knowledge Graph</h3>
                 <p className="text-sm text-[#4e4e4e] leading-relaxed max-w-lg">
-                  Explore connections through an interactive force-directed WebGL visualizer. Click nodes to trace exact source lineages and update properties.
+                  Explore connections through an interactive force-directed WebGL visualizer. Click nodes to trace exact source lineages and update properties. Directly click, zoom, and query individual nodes via temporal asks.
                 </p>
               </div>
             </div>
@@ -950,7 +1102,7 @@ export default function LandingPage() {
               <div>
                 <h3 className="text-lg font-medium text-[#0c0a09] mb-2 font-serif">Structured Diffs</h3>
                 <p className="text-sm text-[#4e4e4e] leading-relaxed max-w-lg">
-                  Audit changes seamlessly with comprehensive lists of additions, removals, modifications, and new historical decisions.
+                  Audit changes seamlessly with comprehensive lists of additions, removals, modifications, and new historical decisions. Provides additions (+), deletions (-), and conflict status mappings per reconciliation cycle.
                 </p>
               </div>
             </div>
@@ -975,25 +1127,59 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ═══════ 7.6 · CREDIBILITY BAND ═══════ */}
+      <div className="relative z-10 py-8 bg-[#f0efed]/50 border-t border-b border-[#e7e5e4] text-center select-none animate-fade-in">
+        <div className="max-w-[1200px] mx-auto px-6 flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-xs text-[#777169] font-medium tracking-wide">
+          <span>BUILT FOR: WeMakeDevs × Cognee Hackathon</span>
+          <span className="hidden sm:inline text-[#d6d3d1]">•</span>
+          <span>POWERED BY: <a href="https://cognee.ai" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors underline decoration-dotted underline-offset-4">Cognee Memory SDK</a></span>
+          <span className="hidden sm:inline text-[#d6d3d1]">•</span>
+          <span>DEVELOPED BY: <a href="https://nishantunavane.qzz.io" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors underline decoration-dotted underline-offset-4">Nishant Unavane</a></span>
+        </div>
+      </div>
+
+      {/* ═══════ 7.7 · FAQ SECTION (Accordion) ═══════ */}
+      <section id="faq" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+        <div className="max-w-[800px] mx-auto">
+          <div className="text-center mb-16">
+            <SectionLabel text="FAQ" color="bg-[#a8c8e8]" />
+            <h2 className="display-lg text-[#0c0a09] leading-[1.08] mb-4" style={{ fontWeight: 300 }}>
+              Frequently Asked Questions
+            </h2>
+            <p className="text-[#4e4e4e] text-base leading-relaxed tracking-[0.16px]">
+              Substantive answers to technical questions about Synapse&apos;s memory architecture.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            {faqs.map((faq, idx) => (
+              <FAQItem
+                key={idx}
+                question={faq.q}
+                answer={faq.a}
+                isOpen={openFaqIndex === idx}
+                onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ═══════ 8 · CTA BAND ═══════ */}
       <section id="cta" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] text-center border-t border-[#e7e5e4] overflow-hidden">
         
-        {/* Subtle background gradient orbs echo */}
-        <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-[0.06]">
-          <div className="absolute top-[20%] left-[-10%] w-[350px] h-[350px] rounded-full filter blur-[80px] bg-gradient-to-r from-[#a7e5d3] to-[#a8c8e8]" />
-          <div className="absolute bottom-[20%] right-[-10%] w-[350px] h-[350px] rounded-full filter blur-[80px] bg-gradient-to-r from-[#f4c5a8] to-[#e8b8c4]" />
-        </div>
+
 
         <div className="max-w-[800px] mx-auto flex flex-col items-center gap-8 relative z-10">
           <SparkleIcon className="w-8 h-8 text-[#292524]/20" />
-          <h2 className="display-lg text-[#0c0a09] leading-[1.08]" style={{ fontSize: "3rem", fontWeight: 300 }}>
+          <h2 className="display-lg text-[#0c0a09] leading-[1.08] text-3xl sm:text-4xl md:text-5xl lg:text-6xl" style={{ fontWeight: 300 }}>
             Stop re-explaining context.
           </h2>
           <p className="text-[#4e4e4e] text-lg max-w-md tracking-[0.16px]">
             Build a memory graph that reconciles, decays, and actively maintains itself.
           </p>
           <button onClick={enter}
-            className="px-8 py-4 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-black transition-all duration-300 cursor-pointer">
+            className="px-8 py-4 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-black transition-all duration-300 cursor-pointer w-full sm:w-auto text-center justify-center flex">
             Initialize graph →
           </button>
         </div>

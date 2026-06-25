@@ -53,9 +53,9 @@
   --color-primary-hover: #0c0a09;
   --color-semantic-danger: #dc2626;
   --color-conflict-warning: #e0a328;
-  --color-confidence-fresh: #292524;
-  --color-confidence-fading: #777169;
-  --color-confidence-stale: #a8a29e;
+  --color-confidence-fresh: #18181b;
+  --color-confidence-fading: #52525b;
+  --color-confidence-stale: #d4d4d8;
 }
 
 body {
@@ -71,7 +71,7 @@ body {
 /* Display typography — EB Garamond (Waldenburg substitute) */
 .display-mega {
   font-family: 'EB Garamond', 'Times New Roman', serif;
-  font-size: clamp(2rem, 5vw, 4rem);
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
   font-weight: 300;
   line-height: 1.05;
   letter-spacing: -1.92px;

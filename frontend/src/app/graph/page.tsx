@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import EmptyState from "@/components/EmptyState";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
-import { getConfidenceColor } from "@/lib/design-tokens";
+import { getConfidenceColor, tokens } from "@/lib/design-tokens";
 import { getGraphSnapshot, forgetNode, getConflictEvents } from "@/lib/api";
 import * as THREE from "three";
 import type { GraphNode, GraphEdge } from "@/lib/types";
@@ -21,16 +21,32 @@ interface NodeDetail extends GraphNode {
 }
 
 const COLORS = {
-  active: "#292524",
+  active: tokens.colors["confidence-fresh"],
   superseded: "#777169",
   rejected: "#dc2626",
   forgotten: "#d6d3d1",
   edge: "#e7e5e4",
-  particle: "#777169",
-  fresh: "#292524",
-  fading: "#777169",
-  stale: "#a8a29e",
+  particle: tokens.colors["confidence-fresh"],
+  fresh: tokens.colors["confidence-fresh"],
+  fading: tokens.colors["confidence-fading"],
+  stale: tokens.colors["confidence-stale"],
 };
+
+function interpolateColor(color1: string, color2: string, factor: number) {
+  const r1 = parseInt(color1.substring(1, 3), 16);
+  const g1 = parseInt(color1.substring(3, 5), 16);
+  const b1 = parseInt(color1.substring(5, 7), 16);
+
+  const r2 = parseInt(color2.substring(1, 3), 16);
+  const g2 = parseInt(color2.substring(3, 5), 16);
+  const b2 = parseInt(color2.substring(5, 7), 16);
+
+  const r = Math.round(r1 + factor * (r2 - r1));
+  const g = Math.round(g1 + factor * (g2 - g1));
+  const b = Math.round(b1 + factor * (b2 - b1));
+
+  return `rgb(${r}, ${g}, ${b})`;
+}
 
 function createGlowTexture() {
   const canvas = document.createElement("canvas");
@@ -38,13 +54,17 @@ function createGlowTexture() {
   canvas.height = 128;
   const ctx = canvas.getContext("2d")!;
   const gradient = ctx.createRadialGradient(64, 64, 0, 64, 64, 64);
-  gradient.addColorStop(0, "rgba(41,37,36,0.3)");
-  gradient.addColorStop(0.2, "rgba(41,37,36,0.15)");
-  gradient.addColorStop(0.5, "rgba(41,37,36,0.05)");
-  gradient.addColorStop(1, "rgba(41,37,36,0)");
+  gradient.addColorStop(0, "rgba(255,255,255,0.4)");
+  gradient.addColorStop(0.2, "rgba(255,255,255,0.2)");
+  gradient.addColorStop(0.5, "rgba(255,255,255,0.08)");
+  gradient.addColorStop(1, "rgba(255,255,255,0)");
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 128, 128);
-  return new THREE.CanvasTexture(canvas);
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  return texture;
 }
 
 function nodeColor(node: GraphNode) {
@@ -201,6 +221,7 @@ export default function GraphPage() {
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [conflictCount, setConflictCount] = useState(0);
@@ -208,6 +229,19 @@ export default function GraphPage() {
   const glowTexRef = useRef<THREE.CanvasTexture | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  const hoveredNodeRef = useRef<any>(null);
+  const selectedNodeRef = useRef<any>(null);
+  const lastSelectedNodeRef = useRef<{ id: string; time: number } | null>(null);
+  const nodeAnimationStatesRef = useRef<Map<string, { hoverProgress: number; lastTime: number }>>(new Map());
+
+  useEffect(() => {
+    hoveredNodeRef.current = hoveredNode;
+  }, [hoveredNode]);
+
+  useEffect(() => {
+    selectedNodeRef.current = selectedNode;
+  }, [selectedNode]);
   const [use2d, setUse2d] = useState(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -261,6 +295,7 @@ export default function GraphPage() {
       status: node.status || "active",
       isDecisionType: node.isDecisionType || false,
     });
+    lastSelectedNodeRef.current = { id: node.id, time: performance.now() };
     if (fgRef.current) {
       fgRef.current.cameraPosition(
         { x: node.x * 1.4, y: node.y * 1.4, z: node.z * 1.4 + 80 },
@@ -277,6 +312,14 @@ export default function GraphPage() {
     }
   }, []);
 
+  const isConnectedToActiveNode = useCallback((link: any) => {
+    const activeNode = hoveredNode || selectedNode;
+    if (!activeNode) return false;
+    const srcId = typeof link.source === "object" ? link.source.id : link.source;
+    const tgtId = typeof link.target === "object" ? link.target.id : link.target;
+    return srcId === activeNode.id || tgtId === activeNode.id;
+  }, [hoveredNode, selectedNode]);
+
   const handleForgetNode = useCallback(async () => {
     if (!selectedNode) return;
     try {
@@ -290,57 +333,84 @@ export default function GraphPage() {
   const nodeThreeObject = useCallback(
     (node: any) => {
       const color = nodeColor(node);
-      const group = new THREE.Group();
+      const level = getConfidenceColor(node.confidenceScore);
+      const isFresh = level === "fresh";
 
-      const isDecision = node.isDecisionType;
-      const outerRadius = isDecision ? 8 : 5.5;
-      const innerRadius = isDecision ? 3.5 : 2.4;
-
-      // 1. Inner solid core
-      const coreGeo = new THREE.SphereGeometry(innerRadius, 32, 32);
-      const coreMat = new THREE.MeshPhysicalMaterial({
+      const radius = node.isDecisionType ? 7 : 5;
+      const geo = new THREE.SphereGeometry(radius, 32, 32);
+      const mat = new THREE.MeshPhysicalMaterial({
         color,
-        roughness: 0.15,
-        metalness: 0.2,
+        roughness: 0.05,
+        metalness: 0.1,
         clearcoat: 1.0,
-      });
-      const core = new THREE.Mesh(coreGeo, coreMat);
-      group.add(core);
-
-      // 2. Outer refracting water/glass bubble sphere
-      const bubbleGeo = new THREE.SphereGeometry(outerRadius, 32, 32);
-      const bubbleMat = new THREE.MeshPhysicalMaterial({
-        color: "#ffffff",
-        transparent: true,
-        opacity: 0.4,
-        roughness: 0.02,
-        metalness: 0.05,
-        transmission: 0.95,
-        ior: 1.333,
+        clearcoatRoughness: 0.02,
+        transmission: 0.6,
+        ior: 1.5,
         thickness: 2.0,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.01,
+        opacity: 0.9,
+        transparent: true,
+        emissive: isFresh ? "#ffffff" : "#000000",
+        emissiveIntensity: isFresh ? 0.15 : 0,
       });
-      const bubble = new THREE.Mesh(bubbleGeo, bubbleMat);
-      group.add(bubble);
+      const mesh = new THREE.Mesh(geo, mat);
 
-      if (glowTexRef.current) {
-        const spriteMat = new THREE.SpriteMaterial({
-          map: glowTexRef.current,
-          blending: THREE.AdditiveBlending,
-          transparent: true,
-          opacity: 0.35,
-          color,
-          depthWrite: false,
-        });
-        const sprite = new THREE.Sprite(spriteMat);
-        sprite.scale.set(24, 24, 1);
-        group.add(sprite);
-      }
+      mesh.onBeforeRender = () => {
+        const time = performance.now();
+        const isHovered = hoveredNodeRef.current?.id === node.id;
+        const isSelected = selectedNodeRef.current?.id === node.id;
 
+        if (mesh.userData.hoverProgress === undefined) {
+          mesh.userData.hoverProgress = 0;
+          mesh.userData.lastTime = time;
+        }
+        const dt = time - mesh.userData.lastTime;
+        mesh.userData.lastTime = time;
 
+        const targetHover = isHovered ? 1 : 0;
+        if (mesh.userData.hoverProgress !== targetHover) {
+          const step = dt / 150;
+          if (isHovered) {
+            mesh.userData.hoverProgress = Math.min(1, mesh.userData.hoverProgress + step);
+          } else {
+            mesh.userData.hoverProgress = Math.max(0, mesh.userData.hoverProgress - step);
+          }
+        }
 
-      return group;
+        let breatheScale = 1.0;
+        if (isFresh && !isHovered) {
+          const seed = node.id ? String(node.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+          breatheScale = 1.0 + 0.06 * Math.sin((time / 1000) * (Math.PI * 2 / 3) + seed);
+        }
+
+        const hoverScale = 1.25;
+        const currentScale = (breatheScale * (1 - mesh.userData.hoverProgress) + hoverScale * mesh.userData.hoverProgress);
+        
+        let pingScale = 1.0;
+        const ping = lastSelectedNodeRef.current;
+        if (ping && ping.id === node.id) {
+          const elapsed = time - ping.time;
+          if (elapsed < 400) {
+            const progress = elapsed / 400;
+            pingScale = 1.0 + 0.4 * Math.sin(progress * Math.PI);
+          }
+        }
+        
+        const finalScale = currentScale * pingScale;
+        mesh.scale.set(finalScale, finalScale, finalScale);
+
+        if (isFresh) {
+          const baseGlow = 0.15 + 0.05 * Math.sin((time / 1000) * (Math.PI * 2 / 3));
+          const targetGlow = isHovered || isSelected ? 0.6 : baseGlow;
+          mat.emissiveIntensity = THREE.MathUtils.lerp(mat.emissiveIntensity, targetGlow, 0.1);
+        } else if (isHovered || isSelected) {
+          mat.emissive.set("#ffffff");
+          mat.emissiveIntensity = THREE.MathUtils.lerp(mat.emissiveIntensity, 0.5, 0.1);
+        } else {
+          mat.emissiveIntensity = THREE.MathUtils.lerp(mat.emissiveIntensity, 0, 0.1);
+        }
+      };
+
+      return mesh;
     },
     [],
   );
@@ -349,50 +419,82 @@ export default function GraphPage() {
     const label = node.label || "";
     const size = node.isDecisionType ? 11 : 8;
     const color = nodeColor(node);
+    const level = getConfidenceColor(node.confidenceScore);
 
-    // 1. Draw outer water bubble reflection and refraction shading
-    const gradient = ctx.createRadialGradient(
-      node.x - size * 0.25, node.y - size * 0.25, size * 0.1,
-      node.x, node.y, size
-    );
-    gradient.addColorStop(0, "rgba(255, 255, 255, 0.95)");
-    gradient.addColorStop(0.3, "rgba(235, 245, 255, 0.55)");
-    gradient.addColorStop(0.85, "rgba(200, 215, 235, 0.15)");
-    gradient.addColorStop(1, "rgba(175, 195, 220, 0.35)");
+    const time = performance.now();
+    
+    const state = nodeAnimationStatesRef.current.get(node.id) || { hoverProgress: 0, lastTime: time };
+    const dt = time - state.lastTime;
+    state.lastTime = time;
 
+    const isHovered = hoveredNode && hoveredNode.id === node.id;
+    const targetHover = isHovered ? 1 : 0;
+    if (state.hoverProgress !== targetHover) {
+      const step = dt / 150;
+      if (isHovered) {
+        state.hoverProgress = Math.min(1, state.hoverProgress + step);
+      } else {
+        state.hoverProgress = Math.max(0, state.hoverProgress - step);
+      }
+    }
+    nodeAnimationStatesRef.current.set(node.id, state);
+
+    let breatheScale = 1.0;
+    if (level === "fresh" && !isHovered) {
+      const seed = node.id ? String(node.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+      breatheScale = 1.0 + 0.06 * Math.sin((time / 1000) * (Math.PI * 2 / 3) + seed);
+    }
+
+    const hoverScale = 1.25;
+    const currentScale = breatheScale * (1 - state.hoverProgress) + hoverScale * state.hoverProgress;
+
+    const ping = lastSelectedNodeRef.current;
+    if (ping && ping.id === node.id) {
+      const elapsed = time - ping.time;
+      if (elapsed < 500) {
+        const progress = elapsed / 500;
+        const ringScale = 1.0 + 2.0 * progress;
+        const opacity = 1.0 - progress;
+        
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, size * currentScale * ringScale, 0, 2 * Math.PI, false);
+        ctx.strokeStyle = `rgba(82, 82, 91, ${opacity * 0.8})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
+    const finalRadius = size * currentScale;
     ctx.beginPath();
-    ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
+    ctx.arc(node.x, node.y, finalRadius, 0, 2 * Math.PI, false);
+
+    const gradient = ctx.createRadialGradient(
+      node.x, node.y, 0,
+      node.x, node.y, finalRadius
+    );
+    const lightCenter = level === "fresh" ? "#52525b" : level === "fading" ? "#a1a1aa" : "#f4f4f5";
+    gradient.addColorStop(0, lightCenter);
+    gradient.addColorStop(1, color);
+
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    // Bubble contour stroke
-    ctx.strokeStyle = "rgba(160, 185, 210, 0.4)";
-    ctx.lineWidth = 0.75;
+    const baseStroke = level === "fresh" ? "#27272a" : level === "fading" ? "#3f3f46" : "#a1a1aa";
+    const hoverStroke = level === "fresh" ? "#f4f4f5" : level === "fading" ? "#f4f4f5" : "#ffffff";
+    const strokeColor = interpolateColor(baseStroke, hoverStroke, state.hoverProgress);
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.0;
     ctx.stroke();
 
-    // 2. Draw small water highlight drop reflections
-    ctx.beginPath();
-    ctx.arc(node.x - size * 0.35, node.y - size * 0.35, size * 0.12, 0, 2 * Math.PI, false);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
-    ctx.fill();
-
-    // 3. Draw inner solid core (floating inside the water bubble)
-    const coreSize = size * 0.4;
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, coreSize, 0, 2 * Math.PI, false);
-    ctx.fillStyle = color;
-    ctx.fill();
-
-
-
-    // Label styling
+    const isSelected = selectedNode && selectedNode.id === node.id;
     const fontSize = 11 / globalScale;
-    ctx.font = `${fontSize}px sans-serif`;
+    ctx.font = isSelected ? `600 ${fontSize}px sans-serif` : `${fontSize}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "#4e4e4e";
-    ctx.fillText(label, node.x, node.y + size + 10);
-  }, []);
+    ctx.fillStyle = isSelected ? "#0c0a09" : "#4e4e4e";
+    ctx.fillText(label, node.x, node.y + size * currentScale + 12);
+  }, [hoveredNode, selectedNode]);
 
   const linkThreeObject = useCallback((link: any) => {
     const color = link.confidence >= 0.8 ? COLORS.particle : COLORS.edge;
@@ -451,13 +553,33 @@ export default function GraphPage() {
                   height={dimensions.height}
                   graphData={graphData}
                   nodeCanvasObject={nodeCanvasObject}
-                  linkWidth={0.8}
-                  linkColor={() => COLORS.edge}
-                  linkDirectionalParticles={1}
-                  linkDirectionalParticleSpeed={0.003}
-                  linkDirectionalParticleWidth={2}
-                  linkDirectionalParticleColor={() => COLORS.particle}
+                  linkWidth={(link) => isConnectedToActiveNode(link) ? 1.5 : 0.8}
+                  linkColor={(link) => isConnectedToActiveNode(link) ? COLORS.particle : COLORS.edge}
+                  linkDirectionalParticles={(link) => isConnectedToActiveNode(link) ? 4 : 1}
+                  linkDirectionalParticleSpeed={(link) => isConnectedToActiveNode(link) ? 0.015 : 0.003}
+                  linkDirectionalParticleCanvasObject={(x: number, y: number, link: any, ctx: CanvasRenderingContext2D) => {
+                    const isActive = isConnectedToActiveNode(link);
+                    const size = isActive ? 2.5 : 1.2;
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, 2 * Math.PI, false);
+
+                    if (isActive) {
+                      ctx.shadowColor = "rgba(94, 106, 210, 0.95)";
+                      ctx.shadowBlur = 12;
+                      ctx.fillStyle = "#5e6ad2";
+                    } else {
+                      ctx.shadowColor = "rgba(168, 162, 158, 0.35)";
+                      ctx.shadowBlur = 4;
+                      ctx.fillStyle = "#78716c";
+                    }
+
+                    ctx.fill();
+                    ctx.restore();
+                  }}
                   onNodeClick={handleNodeClick}
+                  onNodeHover={setHoveredNode}
                   backgroundColor="#f5f5f5"
                   nodeLabel="label"
                   d3VelocityDecay={0.3}
@@ -473,14 +595,15 @@ export default function GraphPage() {
                   graphData={graphData}
                   nodeThreeObject={nodeThreeObject}
                   linkThreeObject={linkThreeObject}
-                  linkWidth={0.8}
+                  linkWidth={(link) => isConnectedToActiveNode(link) ? 1.5 : 0.8}
                   linkOpacity={0.3}
-                  linkDirectionalParticles={1}
-                  linkDirectionalParticleSpeed={0.003}
-                  linkDirectionalParticleWidth={2}
-                  linkDirectionalParticleColor={() => COLORS.particle}
+                  linkDirectionalParticles={(link) => isConnectedToActiveNode(link) ? 4 : 1}
+                  linkDirectionalParticleSpeed={(link) => isConnectedToActiveNode(link) ? 0.015 : 0.003}
+                  linkDirectionalParticleWidth={(link) => isConnectedToActiveNode(link) ? 2.5 : 1.2}
+                  linkDirectionalParticleColor={(link) => isConnectedToActiveNode(link) ? "#5e6ad2" : "#a8a29e"}
                   linkCurvature={0.05}
                   onNodeClick={handleNodeClick}
+                  onNodeHover={setHoveredNode}
                   backgroundColor="#f5f5f5"
                   nodeLabel="label"
                   nodeResolution={24}
@@ -497,7 +620,7 @@ export default function GraphPage() {
               <span className="text-[11px] text-muted font-semibold uppercase tracking-wider">Memory Health</span>
               <div className="flex items-center gap-3.5 pointer-events-auto">
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-primary" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-confidence-fresh" />
                   <span className="text-xs text-body font-medium">Fresh</span>
                 </div>
                 <div className="flex items-center gap-1.5">
