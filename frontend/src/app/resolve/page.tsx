@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import EmptyState from "@/components/EmptyState";
 import { getConflictEvents, resolveConflict } from "@/lib/api";
 import type { ConflictEvent } from "@/lib/types";
+import { useToast } from "@/context/ToastContext";
 
 export default function ResolvePage() {
+  const { addToast } = useToast();
   const [conflicts, setConflicts] = useState<ConflictEvent[]>([]);
   const [resolved, setResolved] = useState<ConflictEvent[]>([]);
   const [noteForId, setNoteForId] = useState<string | null>(null);
@@ -42,8 +44,16 @@ export default function ResolvePage() {
       }
       setNoteForId(null);
       setNoteText("");
+      
+      const toastMsg = resolution === "keep_new"
+        ? "Kept new belief"
+        : resolution === "keep_old"
+          ? "Kept old belief"
+          : "Saved both as context-dependent";
+      addToast(toastMsg, "success");
     } catch (e) {
       console.error("Failed to resolve:", e);
+      addToast("Failed to resolve conflict", "error");
     } finally {
       setResolving(null);
     }

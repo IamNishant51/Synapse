@@ -118,3 +118,13 @@ export async function resetDemoData(): Promise<void> {
     method: "POST",
   });
 }
+
+export interface CogneeActivityLog {
+  timestamp: string;
+  operation: string;
+  details: string;
+}
+
+export async function getCogneeActivity(): Promise<CogneeActivityLog[]> {
+  return fetchAPI("/cognee/activity");
+}

@@ -64,6 +64,19 @@ from database import (
 )
 db_init()
 
+# Cognee Activity Logger for the Live Terminal UI Feed
+cognee_activities: list[dict] = []
+
+def log_cognee_activity(operation: str, details: str):
+    timestamp = datetime.now(timezone.utc).isoformat()
+    cognee_activities.append({
+        "timestamp": timestamp,
+        "operation": operation,
+        "details": details
+    })
+    if len(cognee_activities) > 30:
+        cognee_activities.pop(0)
+
 # Provider: "gemini" (primary) or "groq" (fallback)
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "gemini")
 
@@ -391,14 +404,18 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest)
                     await cognee.remember(file_path_to_remember, dataset_name=COGNEE_DATASET)
                 else:
                     await cognee.remember(full, dataset_name=COGNEE_DATASET)
+                log_cognee_activity("remember()", f"Ingested source '{req.label}'")
+                
                 try:
                     await asyncio.wait_for(cognee.cognify(datasets=[COGNEE_DATASET]), timeout=10.0)
+                    log_cognee_activity("cognify()", f"Generated knowledge graph schemas for '{req.label}'")
                 except asyncio.TimeoutError:
                     print("[Cognee] cognify timed out, proceeding", flush=True)
                 
                 # Call Cognee's native memify pipeline to enrich knowledge graph memory
                 try:
                     await asyncio.wait_for(cognee.memify(dataset=COGNEE_DATASET), timeout=10.0)
+                    log_cognee_activity("memify()", f"Indexed concepts and relation structures for '{req.label}'")
                 except asyncio.TimeoutError:
                     print("[Cognee] memify timed out, proceeding", flush=True)
             except Exception as e:
@@ -947,6 +964,7 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
                 only_context=True,
                 top_k=5,
             )
+            log_cognee_activity("recall()", f"Recalled context matching: '{req.query[:45]}...'")
             graph_ctx_lines.append("\n[Cognee Graph Search Results:]")
             for r in cognee_results:
                 graph_ctx_lines.append(f"- {str(r)[:200]}")
@@ -1180,6 +1198,13 @@ async def resolve_conflict(req: ResolveRequest) -> None:
                     valueSummary=c.oldNodeSummary, confidenceScore=0.10,
                     reason="superseded", date=now
                 ))
+                # Forget the old superseded node in Cognee
+                if COGNEE_READY:
+                    try:
+                        await cognee.forget(data_id=c.oldNodeSummary, dataset=COGNEE_DATASET)
+                        log_cognee_activity("forget()", f"Pruned superseded old claim on '{c.topic}'")
+                    except Exception as err:
+                        print(f"[Cognee] failed to forget superseded old node: {err}", flush=True)
             elif req.resolution == "keep_old":
                 db_save_reconciliation_log_entry(ReconciliationLogEntry(
                     id=log_id, eventType="removed", topic=c.topic,
@@ -1196,6 +1221,13 @@ async def resolve_conflict(req: ResolveRequest) -> None:
                     valueSummary=c.newNodeSummary, confidenceScore=0.10,
                     reason="superseded", date=now
                 ))
+                # Forget the new rejected node in Cognee
+                if COGNEE_READY:
+                    try:
+                        await cognee.forget(data_id=c.newNodeSummary, dataset=COGNEE_DATASET)
+                        log_cognee_activity("forget()", f"Pruned rejected new claim on '{c.topic}'")
+                    except Exception as err:
+                        print(f"[Cognee] failed to forget rejected new node: {err}", flush=True)
             elif req.resolution == "keep_both":
                 db_save_reconciliation_log_entry(ReconciliationLogEntry(
                     id=log_id, eventType="added", topic=c.topic,
@@ -1256,6 +1288,13 @@ async def run_decay_check() -> DecayResult:
         if new_confidence < 0.20:
             c.status = "forgotten"
             forgotten += 1
+            if COGNEE_READY:
+                try:
+                    await cognee.forget(data_id=c.oldNodeSummary, dataset=COGNEE_DATASET)
+                    await cognee.forget(data_id=c.newNodeSummary, dataset=COGNEE_DATASET)
+                    log_cognee_activity("forget()", f"Pruned decayed stale claims on '{c.topic}'")
+                except Exception as err:
+                    print(f"[Cognee] decay forget failed for {c.topic}: {err}", flush=True)
         elif new_confidence < original_confidence:
             decayed += 1
         
@@ -1297,6 +1336,7 @@ async def forget_node(node_id: str) -> None:
     if COGNEE_READY:
         try:
             await cognee.forget(data_id=node_id, dataset=COGNEE_DATASET)
+            log_cognee_activity("forget()", f"Pruned node ID '{node_id[:20]}' from graph")
         except Exception as cognee_err:
             print(f"[Cognee] forget failed: {cognee_err}", flush=True)
 
@@ -1309,9 +1349,13 @@ async def forget_source(source_id: str) -> None:
         if COGNEE_READY:
             try:
                 await cognee.forget(dataset=COGNEE_DATASET, data_id=target_source.label)
+                log_cognee_activity("forget()", f"Pruned source document '{target_source.label}'")
             except Exception:
                 pass
 
 
 async def reset_demo_data() -> None:
     db_reseed()
+
+def get_cognee_activities() -> list[dict]:
+    return cognee_activities

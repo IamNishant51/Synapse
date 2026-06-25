@@ -228,6 +228,7 @@ export default function GraphPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [conflictCount, setConflictCount] = useState(0);
+  const [prevScore, setPrevScore] = useState<number | null>(null);
   const fgRef = useRef<any>(null);
   const glowTexRef = useRef<THREE.CanvasTexture | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -238,6 +239,8 @@ export default function GraphPage() {
   const lastSelectedNodeRef = useRef<{ id: string; time: number } | null>(null);
   const nodeAnimationStatesRef = useRef<Map<string, { hoverProgress: number; lastTime: number }>>(new Map());
 
+  // Memory Health Score: Weighted by avg node confidence (45%) & active ratio (15%), minus conflict penalties (up to -40%).
+  // The +40 constant normalizes standard/un-decayed states to 100 before applying penalties.
   const healthScore = useMemo(() => {
     if (nodes.length === 0) return 100;
     const conflictPenalty = Math.min(40, conflictCount * 8);
@@ -249,6 +252,24 @@ export default function GraphPage() {
     const rawScore = confidenceContribution + activeContribution - conflictPenalty;
     return Math.max(0, Math.min(100, Math.round(rawScore + 40)));
   }, [nodes, conflictCount]);
+
+  const relatedNodes = useMemo(() => {
+    if (!selectedNode) return [];
+    const activeId = selectedNode.id;
+    const connectedNodeIds = new Set<string>();
+    
+    edges.forEach((edge) => {
+      const srcId = typeof edge.source === "object" ? (edge.source as any).id : edge.source;
+      const tgtId = typeof edge.target === "object" ? (edge.target as any).id : edge.target;
+      if (srcId === activeId) {
+        connectedNodeIds.add(tgtId);
+      } else if (tgtId === activeId) {
+        connectedNodeIds.add(srcId);
+      }
+    });
+
+    return nodes.filter((n) => connectedNodeIds.has(n.id) && n.id !== activeId).slice(0, 3);
+  }, [selectedNode, edges, nodes]);
 
   useEffect(() => {
     hoveredNodeRef.current = hoveredNode;
@@ -297,6 +318,16 @@ export default function GraphPage() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!loading && nodes.length > 0) {
+      const prev = localStorage.getItem("synapse_prev_health");
+      if (prev) {
+        setPrevScore(Number(prev));
+      }
+      localStorage.setItem("synapse_prev_health", String(healthScore));
+    }
+  }, [loading, nodes.length, healthScore]);
 
   useEffect(() => {
     glowTexRef.current = createGlowTexture();
@@ -668,7 +699,7 @@ export default function GraphPage() {
             <div className="absolute bottom-20 md:bottom-6 left-4 md:left-6 flex flex-col md:flex-row items-start md:items-center gap-2.5 md:gap-4 px-4 py-3 rounded-full bg-surface-card border border-hairline shadow-md z-10 pointer-events-none md:pointer-events-auto">
               <div className="flex items-center gap-2">
                 <span className="text-[11px] text-muted font-semibold uppercase tracking-wider">Memory Health</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
                   healthScore >= 85 
                     ? "bg-semantic-success/10 text-semantic-success" 
                     : healthScore >= 60 
@@ -676,6 +707,11 @@ export default function GraphPage() {
                       : "bg-semantic-error/10 text-semantic-error"
                 }`}>
                   {healthScore}%
+                  {prevScore !== null && prevScore !== healthScore && (
+                    <span className={healthScore > prevScore ? "text-semantic-success font-semibold" : "text-semantic-error font-semibold"}>
+                      {healthScore > prevScore ? "↑" : "↓"}
+                    </span>
+                  )}
                 </span>
               </div>
               <div className="flex items-center gap-3.5 pointer-events-auto">
@@ -805,6 +841,52 @@ export default function GraphPage() {
                 </div>
               </div>
             </div>
+
+            {/* Related Memories */}
+            {relatedNodes.length > 0 && (
+              <div className="mt-6 pt-5 border-t border-hairline">
+                <span className="caption-upper text-muted block mb-2.5" style={{ fontSize: "10px" }}>Related Memories</span>
+                <div className="space-y-2">
+                  {relatedNodes.map((rn) => (
+                    <button
+                      key={rn.id}
+                      onClick={() => {
+                        setSelectedNode({
+                          id: rn.id,
+                          label: rn.label,
+                          summary: rn.summary || "",
+                          confidenceScore: rn.confidenceScore ?? 0.5,
+                          sourceProvenance: rn.sourceProvenance || "",
+                          lastReinforcedAt: rn.lastReinforcedAt || "",
+                          connectionCount: rn.connectionCount || 0,
+                          status: rn.status || "active",
+                          isDecisionType: rn.isDecisionType || false,
+                        });
+                        const fgNode = fgRef.current?.graphData().nodes.find((n: any) => n.id === rn.id);
+                        if (fgNode && fgRef.current) {
+                          fgRef.current.cameraPosition(
+                            { x: fgNode.x * 1.4, y: fgNode.y * 1.4, z: fgNode.z * 1.4 + 80 },
+                            { x: fgNode.x, y: fgNode.y, z: fgNode.z },
+                            800
+                          );
+                        }
+                      }}
+                      className="w-full text-left p-3 rounded-xl border border-hairline bg-surface-card hover:bg-surface-strong transition-all duration-150 relative overflow-hidden group shadow-sm flex items-center justify-between gap-3 text-xs cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: nodeColor(rn) }}
+                        />
+                        <span className="font-semibold text-ink truncate">{rn.label}</span>
+                      </div>
+                      <span className="text-[10px] text-muted-soft shrink-0 group-hover:translate-x-0.5 transition-transform">trace &rarr;</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2.5 text-[10px] text-muted-soft italic" style={{ letterSpacing: "0.15px" }}>This connection was detected automatically by Synapse.</p>
+              </div>
+            )}
 
             <div className="mt-8 pt-6 border-t border-hairline">
               <button

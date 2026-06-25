@@ -25,6 +25,7 @@ from services import (
     forget_node,
     forget_source,
     reset_demo_data,
+    get_cognee_activities,
 )
 
 async def verify_access_key(x_synapse_key: str = Header(None)):
@@ -134,3 +135,8 @@ async def forget_source_endpoint(req: ForgetSourceRequest):
 async def reset_demo_endpoint():
     await reset_demo_data()
     return {"status": "ok"}
+
+
+@app.get("/cognee/activity")
+async def cognee_activity_endpoint():
+    return get_cognee_activities()
