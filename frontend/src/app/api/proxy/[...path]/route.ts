@@ -6,10 +6,11 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
   const url = new URL(`${backendUrl}/${path}`);
   url.search = request.nextUrl.search;
 
-  const accessKey = process.env.SYNAPSE_ACCESS_KEY || "";
+  const judgeTokenCookie = request.cookies.get("synapse_judge_token");
+  const userToken = judgeTokenCookie?.value || "";
   
   const headers = new Headers(request.headers);
-  headers.set("X-Synapse-Key", accessKey);
+  headers.set("X-Synapse-Key", userToken);
   headers.delete("host");
 
   try {

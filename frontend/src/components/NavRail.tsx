@@ -17,7 +17,7 @@ const navItems = [
 export default function NavRail() {
   const pathname = usePathname();
   const { jobStatus, progress } = useIngestion();
-  const { config, openModal, loading: loadingAI } = useAIConfig();
+  const { config, openModal, loading: loadingAI, isJudgeAuthorized } = useAIConfig();
 
   return (
     <aside className="fixed bottom-0 md:top-0 left-0 z-40 flex w-full h-14 md:h-full md:w-56 flex-row md:flex-col bg-canvas border-t md:border-t-0 md:border-r border-hairline">
@@ -83,12 +83,15 @@ export default function NavRail() {
 
         {/* AI Config Pill */}
         {!loadingAI && config && (
-          config.configured ? (
+          (config.configured || isJudgeAuthorized) ? (
             <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-strong/60 border border-hairline-soft w-full">
               <div className="flex items-center gap-1.5 min-w-0">
                 <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                 <span className="text-[11px] font-semibold text-body truncate capitalize">
-                  {config.provider} &middot; {config.model?.split("/").pop()}
+                  {config.configured 
+                    ? `${config.provider} · ${config.model?.split("/").pop()}`
+                    : "Judge Session"
+                  }
                 </span>
               </div>
               <button
@@ -104,12 +107,12 @@ export default function NavRail() {
             </div>
           ) : (
             <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-surface-strong/30 border border-hairline-soft/50 w-full">
-              <span className="text-[10px] text-muted-soft">Server AI active</span>
+              <span className="text-[10px] text-muted-soft">AI Unconfigured</span>
               <button
                 onClick={openModal}
                 className="text-[10px] font-semibold text-primary hover:underline cursor-pointer"
               >
-                Add custom AI
+                Add AI
               </button>
             </div>
           )

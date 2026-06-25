@@ -42,9 +42,11 @@ from services import (
 
 limiter = Limiter(key_func=get_remote_address)
 
-async def verify_access_key(request: Request, x_synapse_key: str = Header(None)):
-    if request.url.path == "/health":
-        return
+async def verify_llm_authorization(x_synapse_key: str = Header(None)):
+    user_config = db_get_user_ai_config()
+    if user_config and user_config.get("provider") and user_config.get("model"):
+        return  # BYOK is configured, bypass access key checks
+        
     secret = os.environ.get("SYNAPSE_ACCESS_KEY")
     is_dev = os.environ.get("ENVIRONMENT", "production") == "development"
     if not secret:
@@ -52,12 +54,14 @@ async def verify_access_key(request: Request, x_synapse_key: str = Header(None))
             return  # explicit, intentional local-dev bypass
         raise HTTPException(status_code=500, detail="Server misconfigured: SYNAPSE_ACCESS_KEY not set")
     if x_synapse_key != secret:
-        raise HTTPException(status_code=403, detail="Invalid or missing X-Synapse-Key header")
+        raise HTTPException(
+            status_code=403, 
+            detail="A judge access token or your own API key is required to use AI features."
+        )
 
 app = FastAPI(
     title="Synapse — Cognee Backend", 
-    version="0.1.0",
-    dependencies=[Depends(verify_access_key)]
+    version="0.1.0"
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -76,9 +80,21 @@ async def health():
     return {"status": "ok", "service": "synapse-cognee"}
 
 
+class JudgeAuthRequest(BaseModel):
+    token: str
+
+
+@app.post("/ai/judge-auth")
+async def judge_auth_endpoint(req: JudgeAuthRequest):
+    secret = os.environ.get("SYNAPSE_ACCESS_KEY")
+    if not secret or req.token != secret:
+        raise HTTPException(status_code=403, detail="Invalid access token")
+    return {"status": "ok"}
+
+
 @app.post("/ingest")
 @limiter.limit("10/minute")
-async def ingest(request: Request, req: IngestRequest):
+async def ingest(request: Request, req: IngestRequest, _=Depends(verify_llm_authorization)):
     result = await ingest_source(req)
     return result
 
@@ -98,7 +114,7 @@ async def graph_snapshot():
 
 @app.post("/recall")
 @limiter.limit("20/minute")
-async def recall(request: Request, req: RecallRequest):
+async def recall(request: Request, req: RecallRequest, _=Depends(verify_llm_authorization)):
     return await answer_query(req)
 
 
@@ -113,7 +129,7 @@ async def reconciliation_events():
 
 
 @app.post("/reconciliation/resolve")
-async def reconciliation_resolve(req: ResolveRequest):
+async def reconciliation_resolve(req: ResolveRequest, _=Depends(verify_llm_authorization)):
     await resolve_conflict(req)
     return {"status": "ok"}
 

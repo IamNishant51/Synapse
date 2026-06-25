@@ -222,12 +222,13 @@ function GraphLoadingSkeleton() {
 
 export default function GraphPage() {
   const router = useRouter();
-  const { config, openModal } = useAIConfig();
+  const { config, openModal, isJudgeAuthorized } = useAIConfig();
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const showAIBanner = !loading && config && !config.configured && !isJudgeAuthorized;
   const [error, setError] = useState<string | null>(null);
   const [conflictCount, setConflictCount] = useState(0);
   const [prevScore] = useState<number | null>(() => {
@@ -601,7 +602,7 @@ export default function GraphPage() {
       <div ref={containerRef} className="flex-1 relative h-full w-full min-w-0 min-h-0" onDoubleClick={handleBackgroundClick}>
         {loading && <GraphLoadingSkeleton />}
 
-        {!loading && config && !config.configured && (
+        {showAIBanner && (
           <div className="absolute top-4 inset-x-4 md:top-6 md:inset-x-6 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-surface-card/85 border border-primary/20 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.03)] animate-fade-in">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5 sm:mt-0">
@@ -771,7 +772,7 @@ export default function GraphPage() {
               </div>
             </div>
 
-            <div className={`hidden md:flex absolute ${!config?.configured ? "top-28" : "top-6"} left-6 items-center gap-2.5 px-4 py-2 rounded-full bg-surface-card/85 backdrop-blur-md border border-hairline z-10 pointer-events-none shadow-sm transition-all duration-300`}>
+            <div className={`hidden md:flex absolute ${showAIBanner ? "top-28" : "top-6"} left-6 items-center gap-2.5 px-4 py-2 rounded-full bg-surface-card/85 backdrop-blur-md border border-hairline z-10 pointer-events-none shadow-sm transition-all duration-300`}>
               <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
                 <circle cx="6" cy="6" r="5" stroke="#777169" strokeWidth="1" />
                 <path d="M6 3v3l2 2" stroke="#777169" strokeWidth="1" strokeLinecap="round" />
@@ -781,7 +782,7 @@ export default function GraphPage() {
 
             <Link
               href="/resolve"
-              className={`absolute ${!config?.configured ? "top-26 md:top-28" : "top-4 md:top-6"} right-4 md:right-6 flex items-center gap-2 px-4 py-2 rounded-full bg-surface-card border border-hairline z-10 hover:bg-surface-strong transition-all duration-300 cursor-pointer shadow-md`}
+              className={`absolute ${showAIBanner ? "top-26 md:top-28" : "top-4 md:top-6"} right-4 md:right-6 flex items-center gap-2 px-4 py-2 rounded-full bg-surface-card border border-hairline z-10 hover:bg-surface-strong transition-all duration-300 cursor-pointer shadow-md`}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <circle cx="7" cy="7" r="6" stroke="#e0a328" strokeWidth="1.3" />
