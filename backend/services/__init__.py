@@ -150,8 +150,8 @@ try:
             "graph_database_host": os.environ.get("GRAPH_DATABASE_HOST", ""),
             "graph_database_port": int(os.environ.get("GRAPH_DATABASE_PORT", 5432)) if os.environ.get("GRAPH_DATABASE_PORT") else None,
             "graph_database_name": os.environ.get("GRAPH_DATABASE_NAME", ""),
-            "graph_database_username": os.environ.get("GRAPH_DATABASE_username", ""),
-            "graph_database_password": os.environ.get("GRAPH_DATABASE_password", ""),
+            "graph_database_username": os.environ.get("GRAPH_DATABASE_USERNAME", ""),
+            "graph_database_password": os.environ.get("GRAPH_DATABASE_PASSWORD", ""),
             "graph_database_url": os.environ.get("GRAPH_DATABASE_URL", ""),
         }
         graph_config = {k: v for k, v in graph_config.items() if v is not None}

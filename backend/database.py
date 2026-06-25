@@ -47,6 +47,32 @@ class DBRow:
             return self._keys
         return []
 
+def replace_placeholders(sql):
+    result = []
+    in_single_quote = False
+    in_double_quote = False
+    escape = False
+    for char in sql:
+        if escape:
+            result.append(char)
+            escape = False
+            continue
+        if char == '\\':
+            result.append(char)
+            escape = True
+            continue
+        if char == "'" and not in_double_quote:
+            in_single_quote = not in_single_quote
+            result.append(char)
+        elif char == '"' and not in_single_quote:
+            in_double_quote = not in_double_quote
+            result.append(char)
+        elif char == '?' and not in_single_quote and not in_double_quote:
+            result.append('%s')
+        else:
+            result.append(char)
+    return "".join(result)
+
 class DBCursorWrapper:
     def __init__(self, cursor, is_postgres):
         self.cursor = cursor
@@ -54,8 +80,8 @@ class DBCursorWrapper:
 
     def execute(self, sql, parameters=None):
         if self.is_postgres:
-            # Replace SQLite placeholders ? with %s
-            sql = sql.replace("?", "%s")
+            # Replace SQLite placeholders ? with %s safely
+            sql = replace_placeholders(sql)
         if parameters is not None:
             self.cursor.execute(sql, parameters)
         else:
@@ -94,6 +120,15 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "synapse_meta.db")
 
 def get_db_connection():
     postgres_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
+    is_vercel = os.environ.get("VERCEL") == "1"
+    
+    if is_vercel and not postgres_url:
+        raise RuntimeError(
+            "DATABASE_URL or POSTGRES_URL environment variable is missing, "
+            "but the application is running in a Vercel serverless environment. "
+            "PostgreSQL is required in production."
+        )
+        
     if postgres_url:
         import psycopg2
         conn = psycopg2.connect(postgres_url)
