@@ -947,8 +947,8 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ 7 · METADATA GRAPH PREVIEW (Parallax SVG Graph) ═══════ */}
-      <section id="section-graph-preview" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
-        <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
+      <section id="section-graph-preview" className="relative z-10 py-16 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+        <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-center">
           
           <div className="text-left md:col-span-5 flex flex-col gap-6">
             <SectionLabel text="METADATA GRAPH" color="bg-[#e8b8c4]" />
@@ -976,7 +976,7 @@ export default function LandingPage() {
               />
             </div>
             
-            <div className="absolute -top-4 -right-4 bg-white border border-[#e7e5e4] px-3 py-1 rounded-full text-[10px] font-mono shadow-sm z-20 select-none">
+            <div className="absolute -top-3 right-3 md:-top-4 md:-right-4 bg-white border border-[#e7e5e4] px-3 py-1 rounded-full text-[10px] font-mono shadow-sm z-20 select-none">
               Interactive 3D Layer
             </div>
           </div>
