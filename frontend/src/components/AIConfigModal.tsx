@@ -7,32 +7,7 @@ import { useToast } from "@/context/ToastContext";
 
 function getCleanErrorMessage(err: unknown): string {
   if (!err) return "An unknown error occurred";
-  const error = err as Error;
-  const msg = error.message || "";
-  
-  if (msg.startsWith("API ")) {
-    try {
-      const jsonPart = msg.substring(msg.indexOf("{"));
-      const parsed = JSON.parse(jsonPart);
-      if (parsed.detail) {
-        const detail = parsed.detail;
-        if (detail.includes("error") && detail.includes("message")) {
-          try {
-            const startIdx = detail.indexOf("{");
-            if (startIdx !== -1) {
-              const nestedJson = detail.substring(startIdx);
-              const nestedParsed = JSON.parse(nestedJson);
-              if (nestedParsed.error?.message) {
-                return nestedParsed.error.message;
-              }
-            }
-          } catch {}
-        }
-        return detail;
-      }
-    } catch {}
-  }
-  return msg || "An error occurred";
+  return (err as Error).message || "An error occurred";
 }
 
 export default function AIConfigModal() {

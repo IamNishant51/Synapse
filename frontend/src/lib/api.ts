@@ -10,6 +10,42 @@ import type {
 
 const API_BASE = "/api/proxy";
 
+function parseAPIError(status: number, body: string): string {
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed.detail) {
+      const detail = parsed.detail;
+      if (typeof detail === "string" && detail.includes("error") && detail.includes("message")) {
+        try {
+          const startIdx = detail.indexOf("{");
+          if (startIdx !== -1) {
+            const nestedJson = detail.substring(startIdx);
+            const nestedParsed = JSON.parse(nestedJson);
+            if (nestedParsed.error?.message) {
+              return nestedParsed.error.message;
+            }
+          }
+        } catch {}
+      }
+      return detail;
+    }
+  } catch {}
+  
+  if (status === 403) {
+    return "A judge access token or your own API key is required to use AI features.";
+  }
+  if (status === 401) {
+    return "Unauthorized session. Please check your credentials.";
+  }
+  if (status === 404) {
+    return "Requested resource not found.";
+  }
+  if (status >= 500) {
+    return "Server error. Make sure the backend is running correctly.";
+  }
+  return `Request failed with status ${status}`;
+}
+
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
   const res = await fetch(url, {
@@ -21,7 +57,8 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`API ${res.status}: ${body}`);
+    const cleanMsg = parseAPIError(res.status, body);
+    throw new Error(cleanMsg);
   }
   return res.json();
 }
