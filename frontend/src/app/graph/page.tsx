@@ -235,6 +235,18 @@ export default function GraphPage() {
   const lastSelectedNodeRef = useRef<{ id: string; time: number } | null>(null);
   const nodeAnimationStatesRef = useRef<Map<string, { hoverProgress: number; lastTime: number }>>(new Map());
 
+  const healthScore = useMemo(() => {
+    if (nodes.length === 0) return 100;
+    const conflictPenalty = Math.min(40, conflictCount * 8);
+    const avgConfidence = nodes.reduce((sum, n) => sum + (n.confidenceScore ?? 0.5), 0) / nodes.length;
+    const confidenceContribution = avgConfidence * 45;
+    const activeNodes = nodes.filter(n => n.status === "active").length;
+    const activeRatio = activeNodes / nodes.length;
+    const activeContribution = activeRatio * 15;
+    const rawScore = confidenceContribution + activeContribution - conflictPenalty;
+    return Math.max(0, Math.min(100, Math.round(rawScore + 40)));
+  }, [nodes, conflictCount]);
+
   useEffect(() => {
     hoveredNodeRef.current = hoveredNode;
   }, [hoveredNode]);
@@ -617,7 +629,18 @@ export default function GraphPage() {
             )}
 
             <div className="absolute bottom-20 md:bottom-6 left-4 md:left-6 flex flex-col md:flex-row items-start md:items-center gap-2.5 md:gap-4 px-4 py-3 rounded-full bg-surface-card border border-hairline shadow-md z-10 pointer-events-none md:pointer-events-auto">
-              <span className="text-[11px] text-muted font-semibold uppercase tracking-wider">Memory Health</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-muted font-semibold uppercase tracking-wider">Memory Health</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  healthScore >= 85 
+                    ? "bg-semantic-success/10 text-semantic-success" 
+                    : healthScore >= 60 
+                      ? "bg-conflict-warning/10 text-conflict-warning" 
+                      : "bg-semantic-error/10 text-semantic-error"
+                }`}>
+                  {healthScore}%
+                </span>
+              </div>
               <div className="flex items-center gap-3.5 pointer-events-auto">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-confidence-fresh" />

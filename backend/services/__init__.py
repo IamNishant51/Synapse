@@ -20,6 +20,8 @@ from models import (
     NodeSearchResult,
     ReconciliationLogEntry,
     ConfidenceHistoryEntry,
+    ConnectionItem,
+    ConnectionMap,
 )
 import os
 import uuid
@@ -389,9 +391,15 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest)
                 else:
                     await cognee.remember(full, dataset_name=COGNEE_DATASET)
                 try:
-                    await asyncio.wait_for(cognee.cognify(datasets=[COGNEE_DATASET]), timeout=5.0)
+                    await asyncio.wait_for(cognee.cognify(datasets=[COGNEE_DATASET]), timeout=10.0)
                 except asyncio.TimeoutError:
                     print("[Cognee] cognify timed out, proceeding", flush=True)
+                
+                # Call Cognee's native memify pipeline to enrich knowledge graph memory
+                try:
+                    await asyncio.wait_for(cognee.memify(dataset=COGNEE_DATASET), timeout=10.0)
+                except asyncio.TimeoutError:
+                    print("[Cognee] memify timed out, proceeding", flush=True)
             except Exception as e:
                 print(f"[Cognee] ingestion failed: {e}", flush=True)
 
@@ -742,15 +750,34 @@ def get_term_overlap_score(query_terms: list[str], candidate: str) -> int:
 
 
 def get_matched_topic(query: str, available_topics: list[str]) -> Optional[str]:
-    """Match a query against the provided list of topics."""
+    """Match a query against the provided list of topics using a robust term-overlap score
+    modeled on the get_relevant_db_context pattern."""
     query_terms = extract_query_terms(query)
     if not available_topics or not query_terms:
         return None
 
+    db_conflicts = db_get_conflicts(include_resolved=True)
+
     best_match = None
     best_score = 0
     for topic in available_topics:
-        score = get_term_overlap_score(query_terms, topic)
+        # Calculate term overlap score for the topic name
+        score = 0
+        topic_lower = topic.lower()
+        for term in query_terms:
+            if term in topic_lower:
+                score += 3  # High weight for matching the topic name directly
+                
+        # Also check associated conflicts for this topic to match detailed queries
+        for c in db_conflicts:
+            if c.topic.lower() == topic_lower:
+                for term in query_terms:
+                    if (term in c.oldNodeSummary.lower() or 
+                        term in c.newNodeSummary.lower() or 
+                        term in c.oldNodeSource.lower() or 
+                        term in c.newNodeSource.lower()):
+                        score += 1
+
         if score > best_score:
             best_score = score
             best_match = topic
@@ -876,7 +903,10 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
     msg_id = str(uuid.uuid4())
 
     intent: str = "standard"
-    if "changed" in query:
+    correlation_keywords = {"connect", "connection", "connections", "correlate", "correlation", "link", "linked", "relationship", "related"}
+    if any(k in query for k in correlation_keywords):
+        intent = "cross_correlation"
+    elif "changed" in query:
         intent = "what_changed"
     elif "believe" in query or "timeline" in query or "before" in query or "before vs" in query:
         intent = "temporal_belief"
@@ -954,40 +984,49 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
     ignorance_phrases = ["don't have", "no information", "no context", "couldn't find", "not mentioned", "not enough", "don't know", "cannot determine", "doesn't contain"]
     is_refusal = len(answer.strip()) < 180 and any(p in answer.lower() for p in ignorance_phrases)
     if is_refusal:
-        conflict_lines = [l for l in graph_ctx_lines if l.startswith("- Conflict in")]
-        content_lines = []
-        source_labels = []
-        for i, l in enumerate(graph_ctx_lines):
-            if l.startswith("- Source "):
-                m = re.match(r'- Source "([^"]+)"', l)
-                if m:
-                    source_labels.append(m.group(1))
-            if l.startswith("  Content:") and source_labels:
-                content_lines.append((source_labels[-1], l.replace("  Content: ", "", 1)))
-        if conflict_lines:
-            parts = []
-            for line in conflict_lines:
-                m = re.match(r'- Conflict in "([^"]+)".*old: "([^"]+)".*new: "([^"]+)".*→ (\w+)', line)
-                if m:
-                    topic = m.group(1)
-                    old_val = m.group(2)
-                    new_val = m.group(3)
-                    rel = m.group(4)
-                    if rel == "supersedes":
-                        parts.append(f"On the topic of **{topic}**, the old belief was \"{old_val}\". This was superseded by the new decision \"{new_val}\".")
+        query_terms = extract_query_terms(req.query)
+        matched_topic = get_matched_topic(req.query, db_get_distinct_topics())
+        
+        # Check if any sources match the query terms
+        matched_sources = []
+        if query_terms:
+            for s in db_sources:
+                if any(term in s.label.lower() or (s.url and term in s.url.lower()) for term in query_terms):
+                    matched_sources.append(s)
+
+        if matched_topic:
+            relevant_conflicts = [c for c in db_conflicts if c.topic.lower() == matched_topic.lower()]
+            if relevant_conflicts:
+                parts = []
+                for c in relevant_conflicts:
+                    if c.relationship == "supersedes":
+                        parts.append(f"On the topic of **{c.topic}**, the old belief was \"{c.oldNodeSummary}\". This was superseded by the new decision \"{c.newNodeSummary}\".")
                     else:
-                        parts.append(f"On **{topic}**, there is a conflict between \"{old_val}\" and \"{new_val}\".")
-            if parts:
+                        parts.append(f"On **{c.topic}**, there is a conflict between \"{c.oldNodeSummary}\" and \"{c.newNodeSummary}\".")
                 answer = ("Based on your knowledge graph, here's what I found:\n\n" + "\n\n".join(parts) +
-                          "\n\nThese changes were detected automatically by Synapse when new information contradicted existing knowledge. "
-                          "You can review and resolve them under **What Changed**.")
-        elif content_lines:
+                          f"\n\nThese changes were detected automatically by Synapse under the topic **{matched_topic}**.")
+            else:
+                answer = f"I couldn't find any tracked conflicts or history for the topic **{matched_topic}**."
+        elif matched_sources:
             parts = []
-            for label, snippet in content_lines:
-                parts.append(f"**{label}**: {snippet}")
-            answer = ("Based on your knowledge graph, here's what I found about this source:\n\n" +
-                      "\n\n".join(parts[:3]) +
-                      "\n\n*This information was extracted from the source content you ingested.*")
+            for s in matched_sources[:3]:
+                raw = db_get_source_content(s.label)
+                snippet = raw.strip()[:600] if raw else ""
+                if snippet:
+                    parts.append(f"**{s.label}**: {snippet}...")
+            if parts:
+                answer = ("Based on your knowledge graph, here's what I found about this source:\n\n" +
+                          "\n\n".join(parts) +
+                          "\n\n*This information was extracted from the source content you ingested.*")
+            else:
+                answer = f"I found the matching source '{matched_sources[0].label}', but it doesn't contain text details matching your query."
+        else:
+            available_topics = db_get_distinct_topics()
+            if available_topics:
+                topics_str = ", ".join(f"**{t}**" for t in available_topics)
+                answer = f"I couldn't find any information about that in your knowledge graph. Currently, I am tracking changes for these topics: {topics_str}."
+            else:
+                answer = "I don't have any tracked topics or decisions in the database yet. Please ingest a source under 'Add Memory' to start."
 
     # Build structured data from real reconciliation_log and confidence_history
     matched_source_labels = set()
@@ -1006,6 +1045,7 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
 
     diff_card: Optional[DiffCard] = None
     timeline_list: Optional[list[TimelinePoint]] = None
+    connection_map: Optional[ConnectionMap] = None
 
     if intent == "what_changed":
         matched_topic = get_matched_topic(query, db_get_distinct_topics())
@@ -1034,6 +1074,66 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
                     TimelinePoint(date=h.date, valueSummary=h.valueSummary, confidenceScore=h.confidenceScore, reason=h.reason)
                     for h in sorted(db_history, key=lambda x: x.date)
             ]
+    elif intent == "cross_correlation":
+        matched_topic = get_matched_topic(query, db_get_distinct_topics())
+        if matched_topic:
+            connections = []
+            matched_conflicts = [c for c in db_conflicts if c.topic.lower() == matched_topic.lower()]
+            matched_sources = set()
+            matched_dates = set()
+            for c in matched_conflicts:
+                matched_sources.add(c.oldNodeSource.lower())
+                matched_sources.add(c.newNodeSource.lower())
+                matched_dates.add(c.oldNodeDate)
+                matched_dates.add(c.newNodeDate)
+                
+            seen_connected_topics = set()
+            for c in db_conflicts:
+                if c.topic.lower() == matched_topic.lower():
+                    continue
+                if c.topic.lower() in seen_connected_topics:
+                    continue
+                    
+                if c.oldNodeSource.lower() in matched_sources or c.newNodeSource.lower() in matched_sources:
+                    shared_src = c.oldNodeSource if c.oldNodeSource.lower() in matched_sources else c.newNodeSource
+                    connections.append(ConnectionItem(
+                        nodeLabel=c.topic,
+                        type="shared_source",
+                        description=f"Both '{matched_topic}' and '{c.topic}' reference the shared source document '{shared_src}'."
+                    ))
+                    seen_connected_topics.add(c.topic.lower())
+                    continue
+                    
+                if c.oldNodeDate in matched_dates or c.newNodeDate in matched_dates:
+                    shared_date = c.oldNodeDate if c.oldNodeDate in matched_dates else c.newNodeDate
+                    connections.append(ConnectionItem(
+                        nodeLabel=c.topic,
+                        type="temporal_proximity",
+                        description=f"Decisions on '{matched_topic}' and '{c.topic}' were both recorded on the same date: {shared_date}."
+                    ))
+                    seen_connected_topics.add(c.topic.lower())
+                    continue
+                    
+                matched_words = set(extract_query_terms(c.newNodeSummary) + extract_query_terms(c.oldNodeSummary))
+                topic_words = set()
+                for mc in matched_conflicts:
+                    topic_words.update(extract_query_terms(mc.newNodeSummary) + extract_query_terms(mc.oldNodeSummary))
+                
+                common_words = matched_words.intersection(topic_words)
+                if common_words:
+                    word_str = ", ".join(f"'{w}'" for w in list(common_words)[:2])
+                    connections.append(ConnectionItem(
+                        nodeLabel=c.topic,
+                        type="semantic_link",
+                        description=f"Both topics share semantic context related to {word_str} in their belief statements."
+                    ))
+                    seen_connected_topics.add(c.topic.lower())
+                    
+            if connections:
+                connection_map = ConnectionMap(
+                    topic=matched_topic,
+                    connections=connections[:4]
+                )
 
     return ChatMessage(
         id=msg_id, query=req.query, intent=intent,
@@ -1041,6 +1141,7 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
         sources=sources_list,
         diffCard=diff_card,
         timeline=timeline_list,
+        connectionMap=connection_map,
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
 

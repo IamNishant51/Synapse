@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useEffect, useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import SourcePill from "@/components/SourcePill";
 import { useChat } from "@/context/ChatContext";
 import { getAskTopics } from "@/lib/api";
-import type { DiffCard, TimelinePoint } from "@/lib/types";
+import type { DiffCard, TimelinePoint, ConnectionMap } from "@/lib/types";
 
 const fallbackPromptChips = [
   "What changed about my tracked topics?",
@@ -97,6 +98,45 @@ function TimelineView({ points }: { points: TimelinePoint[] }) {
               {Math.round(point.confidenceScore * 100)}%
             </span>
             <span className="text-xs font-medium text-body shrink-0">{point.valueSummary}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ConnectionMapView({ map }: { map: ConnectionMap }) {
+  return (
+    <div className="mt-5 rounded-xl border border-hairline p-5 bg-canvas">
+      <span className="caption-upper text-muted mb-4 block" style={{ fontSize: "11px" }}>Connection Map: {map.topic}</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {map.connections.map((conn, i) => (
+          <div key={i} className="p-4 rounded-xl border border-hairline bg-surface-card hover:bg-surface-strong transition-all duration-150 relative overflow-hidden group shadow-sm flex flex-col justify-between">
+            <div className="absolute top-0 left-0 w-[3px] h-full bg-primary/20 group-hover:bg-primary/50 transition-colors" />
+            <div>
+              <div className="flex items-center justify-between mb-1.5 gap-2">
+                <span className="text-sm font-semibold text-ink truncate max-w-[70%]">{conn.nodeLabel}</span>
+                <span className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full shrink-0 ${
+                  conn.type === "shared_source" 
+                    ? "bg-primary/10 text-primary" 
+                    : conn.type === "temporal_proximity" 
+                      ? "bg-conflict-warning/10 text-conflict-warning" 
+                      : "bg-semantic-success/10 text-semantic-success"
+                }`}>
+                  {conn.type.replace("_", " ")}
+                </span>
+              </div>
+              <p className="text-xs text-muted leading-relaxed mb-3">{conn.description}</p>
+            </div>
+            <Link 
+              href={`/graph?mode=2d&node=${encodeURIComponent(conn.nodeLabel)}`}
+              className="text-[10px] font-bold text-ink uppercase tracking-wider hover:underline flex items-center gap-1 group-hover:translate-x-0.5 transition-transform w-fit pointer-events-auto"
+            >
+              Trace in Graph 
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="inline">
+                <path d="M3 1h6v6M9 1L1 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
           </div>
         ))}
       </div>
@@ -410,6 +450,7 @@ export default function AskPage() {
                 </div>
                 {msg.diffCard && <DiffCardView diff={msg.diffCard} />}
                 {msg.timeline && <TimelineView points={msg.timeline} />}
+                {msg.connectionMap && <ConnectionMapView map={msg.connectionMap} />}
                 {msg.sources.length > 0 && (
                   <div className="mt-5 pt-4 border-t border-hairline flex flex-wrap items-center gap-2">
                     <span className="caption-upper text-muted" style={{ fontSize: "10px" }}>Ingested Sources:</span>

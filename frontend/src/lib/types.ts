@@ -70,14 +70,26 @@ export interface TimelinePoint {
   reason: string;
 }
 
+export interface ConnectionItem {
+  nodeLabel: string;
+  type: "shared_source" | "temporal_proximity" | "semantic_link";
+  description: string;
+}
+
+export interface ConnectionMap {
+  topic: string;
+  connections: ConnectionItem[];
+}
+
 export interface ChatMessage {
   id: string;
   query: string;
-  intent: QueryIntent | null;
+  intent: QueryIntent | "cross_correlation" | null;
   answer: string;
   sources: { label: string; type: SourceType }[];
   diffCard: DiffCard | null;
   timeline: TimelinePoint[] | null;
+  connectionMap?: ConnectionMap | null;
   timestamp: string;
 }
 

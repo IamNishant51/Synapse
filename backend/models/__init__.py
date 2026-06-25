@@ -74,6 +74,17 @@ class TimelinePoint(BaseModel):
     reason: str
 
 
+class ConnectionItem(BaseModel):
+    nodeLabel: str
+    type: str
+    description: str
+
+
+class ConnectionMap(BaseModel):
+    topic: str
+    connections: list[ConnectionItem]
+
+
 class ChatMessage(BaseModel):
     id: str
     query: str
@@ -82,6 +93,7 @@ class ChatMessage(BaseModel):
     sources: list[SourcePill]
     diffCard: Optional[DiffCard] = None
     timeline: Optional[list[TimelinePoint]] = None
+    connectionMap: Optional[ConnectionMap] = None
     timestamp: str
 
 

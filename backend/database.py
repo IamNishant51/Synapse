@@ -105,8 +105,10 @@ def db_init():
     
     cursor.execute("SELECT COUNT(*) FROM sources")
     has_sources = cursor.fetchone()[0] > 0
+    cursor.execute("SELECT COUNT(*) FROM conflicts")
+    has_conflicts = cursor.fetchone()[0] > 0
     
-    if not is_seeded or not has_sources:
+    if not is_seeded or not has_sources or not has_conflicts:
         # Clear database to prevent primary key conflicts on re-seeding
         cursor.execute("DELETE FROM db_metadata WHERE key='seeded'")
         cursor.execute("DELETE FROM sources WHERE id IN ('1', '2', '3')")
