@@ -9,7 +9,7 @@
 No setup required. Open the link above, click **"Add AI"** on the dashboard (or in Settings), choose **"Judge Access Token"**, and paste the key below:
 
 ```
-SYNAPSE-JUDGE-19a3ea7d233f556aaed6e00feb9a4096
+SYNAPSE-JUDGE-efd63f63d6f5b7842f89a9ab0b46dcc9
 ```
 
 This runs the app on our own pre-configured server keys — you don't need a personal API key for Groq, OpenAI, or Gemini. The "Bring Your Own Key" option on the same screen is for anyone self-hosting their own copy with their own provider account; judges should use the token above instead.
@@ -142,6 +142,7 @@ Self-hosting users can connect their own accounts/keys for Groq, OpenAI, or Gemi
    # Required for the judge-access-token flow described above.
    # If unset, /ingest, /recall, and /reconciliation/resolve fail closed (by design).
    SYNAPSE_ACCESS_KEY=generate-a-long-random-string-here
+   JUDGE_ACCESS_TOKEN=SYNAPSE-JUDGE-efd63f63d6f5b7842f89a9ab0b46dcc9
    FRONTEND_URL=http://localhost:3000
    ```
 5. Start the backend server:

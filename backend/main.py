@@ -48,13 +48,14 @@ async def verify_llm_authorization(x_synapse_key: str = Header(None)):
         return  # BYOK is configured, bypass access key checks
         
     secret = os.environ.get("SYNAPSE_ACCESS_KEY")
+    judge_token = os.environ.get("JUDGE_ACCESS_TOKEN")
     is_dev = os.environ.get("ENVIRONMENT", "production") == "development"
-    if not secret:
+    if not secret and not judge_token:
         if is_dev:
             return  # explicit, intentional local-dev bypass
-        raise HTTPException(status_code=500, detail="Server misconfigured: SYNAPSE_ACCESS_KEY not set")
+        raise HTTPException(status_code=500, detail="Server misconfigured: Access keys not configured")
         
-    allowed_keys = {secret, "SYNAPSE-JUDGE-19a3ea7d233f556aaed6e00feb9a4096"}
+    allowed_keys = {k for k in (secret, judge_token) if k}
     if x_synapse_key not in allowed_keys:
         raise HTTPException(
             status_code=403, 
@@ -89,10 +90,9 @@ class JudgeAuthRequest(BaseModel):
 @app.post("/ai/judge-auth")
 async def judge_auth_endpoint(req: JudgeAuthRequest):
     secret = os.environ.get("SYNAPSE_ACCESS_KEY")
-    allowed_keys = {"SYNAPSE-JUDGE-19a3ea7d233f556aaed6e00feb9a4096"}
-    if secret:
-        allowed_keys.add(secret)
-        
+    judge_token = os.environ.get("JUDGE_ACCESS_TOKEN")
+    
+    allowed_keys = {k for k in (secret, judge_token) if k}
     if req.token not in allowed_keys:
         raise HTTPException(status_code=403, detail="Invalid access token")
     return {"status": "ok"}
