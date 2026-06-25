@@ -229,7 +229,8 @@ export default function GraphPage() {
   const [error, setError] = useState<string | null>(null);
   const [conflictCount, setConflictCount] = useState(0);
   const [prevScore, setPrevScore] = useState<number | null>(null);
-  const fgRef = useRef<any>(null);
+  const fg3dRef = useRef<any>(null);
+  const fg2dRef = useRef<any>(null);
   const glowTexRef = useRef<THREE.CanvasTexture | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -360,21 +361,25 @@ export default function GraphPage() {
       isDecisionType: node.isDecisionType || false,
     });
     lastSelectedNodeRef.current = { id: node.id, time: performance.now() };
-    if (fgRef.current) {
-      fgRef.current.cameraPosition(
+    if (use2d && fg2dRef.current) {
+      fg2dRef.current.centerAt(node.x, node.y, 800);
+    } else if (!use2d && fg3dRef.current) {
+      fg3dRef.current.cameraPosition(
         { x: node.x * 1.4, y: node.y * 1.4, z: node.z * 1.4 + 80 },
         { x: node.x, y: node.y, z: node.z },
         800,
       );
     }
-  }, []);
+  }, [use2d]);
 
   const handleBackgroundClick = useCallback(() => {
     setSelectedNode(null);
-    if (fgRef.current) {
-      fgRef.current.cameraPosition({ x: 0, y: 0, z: 250 }, { x: 0, y: 0, z: 0 }, 800);
+    if (use2d && fg2dRef.current) {
+      fg2dRef.current.zoomToFit(800);
+    } else if (!use2d && fg3dRef.current) {
+      fg3dRef.current.cameraPosition({ x: 0, y: 0, z: 250 }, { x: 0, y: 0, z: 0 }, 800);
     }
-  }, []);
+  }, [use2d]);
 
   const isConnectedToActiveNode = useCallback((link: any) => {
     const activeNode = hoveredNode || selectedNode;
@@ -628,7 +633,7 @@ export default function GraphPage() {
             {dimensions.width > 0 && dimensions.height > 0 && (
               use2d ? (
                 <ForceGraph2D
-                  ref={fgRef}
+                  ref={fg2dRef}
                   width={dimensions.width}
                   height={dimensions.height}
                   graphData={graphData}
@@ -669,7 +674,7 @@ export default function GraphPage() {
                 />
               ) : (
                 <ForceGraph3D
-                  ref={fgRef}
+                  ref={fg3dRef}
                   width={dimensions.width}
                   height={dimensions.height}
                   graphData={graphData}
@@ -775,11 +780,15 @@ export default function GraphPage() {
                 />
                 <h3 className="text-base font-semibold text-ink tracking-tight">{selectedNode.label}</h3>
               </div>
-              <button
-                onClick={() => {
-                  setSelectedNode(null);
-                  if (fgRef.current) fgRef.current.cameraPosition({ x: 0, y: 0, z: 250 }, { x: 0, y: 0, z: 0 }, 800);
-                }}
+                    <button
+                      onClick={() => {
+                        setSelectedNode(null);
+                        if (use2d && fg2dRef.current) {
+                          fg2dRef.current.zoomToFit(800);
+                        } else if (!use2d && fg3dRef.current) {
+                          fg3dRef.current.cameraPosition({ x: 0, y: 0, z: 250 }, { x: 0, y: 0, z: 0 }, 800);
+                        }
+                      }}
                 className="text-muted hover:text-ink transition-colors duration-150 cursor-pointer"
               >
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -862,13 +871,18 @@ export default function GraphPage() {
                           status: rn.status || "active",
                           isDecisionType: rn.isDecisionType || false,
                         });
-                        const fgNode = fgRef.current?.graphData().nodes.find((n: any) => n.id === rn.id);
-                        if (fgNode && fgRef.current) {
-                          fgRef.current.cameraPosition(
-                            { x: fgNode.x * 1.4, y: fgNode.y * 1.4, z: fgNode.z * 1.4 + 80 },
-                            { x: fgNode.x, y: fgNode.y, z: fgNode.z },
-                            800
-                          );
+                        const graphRef = use2d ? fg2dRef.current : fg3dRef.current;
+                        const fgNode = graphRef?.graphData?.()?.nodes?.find((n: any) => n.id === rn.id);
+                        if (fgNode && graphRef) {
+                          if (use2d) {
+                            graphRef.centerAt(fgNode.x, fgNode.y, 800);
+                          } else {
+                            graphRef.cameraPosition(
+                              { x: fgNode.x * 1.4, y: fgNode.y * 1.4, z: fgNode.z * 1.4 + 80 },
+                              { x: fgNode.x, y: fgNode.y, z: fgNode.z },
+                              800
+                            );
+                          }
                         }
                       }}
                       className="w-full text-left p-3 rounded-xl border border-hairline bg-surface-card hover:bg-surface-strong transition-all duration-150 relative overflow-hidden group shadow-sm flex items-center justify-between gap-3 text-xs cursor-pointer"
