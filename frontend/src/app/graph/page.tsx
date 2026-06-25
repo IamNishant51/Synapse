@@ -228,7 +228,13 @@ export default function GraphPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [conflictCount, setConflictCount] = useState(0);
-  const [prevScore, setPrevScore] = useState<number | null>(null);
+  const [prevScore] = useState<number | null>(() => {
+    if (typeof window !== "undefined") {
+      const prev = localStorage.getItem("synapse_prev_health");
+      return prev ? Number(prev) : null;
+    }
+    return null;
+  });
   const fg3dRef = useRef<any>(null);
   const fg2dRef = useRef<any>(null);
   const glowTexRef = useRef<THREE.CanvasTexture | null>(null);
@@ -322,16 +328,13 @@ export default function GraphPage() {
 
   useEffect(() => {
     if (!loading && nodes.length > 0) {
-      const prev = localStorage.getItem("synapse_prev_health");
-      if (prev) {
-        setPrevScore(Number(prev));
-      }
       localStorage.setItem("synapse_prev_health", String(healthScore));
     }
   }, [loading, nodes.length, healthScore]);
 
   useEffect(() => {
     glowTexRef.current = createGlowTexture();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchGraphData();
   }, [fetchGraphData]);
 

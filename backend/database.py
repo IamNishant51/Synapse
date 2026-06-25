@@ -37,7 +37,7 @@ def db_init():
     # Ensure content column exists on previously-created tables
     try:
         cursor.execute("ALTER TABLE sources ADD COLUMN content TEXT DEFAULT ''")
-    except:
+    except sqlite3.OperationalError:
         pass
     
     # 2. Conflicts table (reconciliation_log/Inbox queue)
@@ -180,7 +180,7 @@ def db_get_sources() -> List[Source]:
         from datetime import datetime, timezone, timedelta
         cutoff = (datetime.now(timezone.utc) - timedelta(seconds=120)).isoformat()
         cursor.execute("UPDATE sources SET status='ready' WHERE status='processing' AND ingested_at < ?", (cutoff,))
-    except:
+    except sqlite3.Error:
         pass
 
     cursor.execute("SELECT * FROM sources ORDER BY ingested_at DESC")

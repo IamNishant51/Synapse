@@ -105,7 +105,7 @@ export default function SettingsPage() {
       try {
         await updateDecaySettings({ decayStartDays: val, forgetThresholdDays: forgetThreshold });
         addToast("Decay settings updated", "success");
-      } catch (err) {
+      } catch {
         if (originalVal !== null) {
           setDecayStart(originalVal);
         }
@@ -128,7 +128,7 @@ export default function SettingsPage() {
       try {
         await updateDecaySettings({ decayStartDays: decayStart, forgetThresholdDays: val });
         addToast("Pruning threshold updated", "success");
-      } catch (err) {
+      } catch {
         if (originalVal !== null) {
           setForgetThreshold(originalVal);
         }

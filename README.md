@@ -62,10 +62,10 @@ Synapse integrates Cognee's memory lifecycle APIs directly to solve the context 
 
 | Cognee Operation | Code Location | Synapse Application Feature |
 |---|---|---|
-| `remember()` | [services/__init__.py:L391](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L391) | Ingests PDF files, GitHub repositories, ChatGPT exports, articles, and YouTube transcripts. |
-| `recall()` | [services/__init__.py:L944](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L944) | Powers graph-grounded, time-aware chat queries ("what did I believe before vs now"). |
-| `improve()` / `cognify()` | [services/__init__.py:L395](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L395) (and reconciliation at [L407](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L407)) | Runs the `cognify` step to build the graph, and the Reconciliation Pass to detect semantic conflicts and update confidence weights. |
-| `forget()` | [services/__init__.py:L1299](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L1299) (and [L1311](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py#L1311)) | Enables user-triggered manual pruning, source-level forgetting, and automatic decay of stale nodes. |
+| `remember()` | [services/__init__.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py) | Ingests PDF files, GitHub repositories, ChatGPT exports, articles, and YouTube transcripts. |
+| `recall()` | [services/__init__.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py) | Powers graph-grounded, time-aware chat queries ("what did I believe before vs now"). |
+| `improve()` / `cognify()` | [services/__init__.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py) | Runs the `cognify` step to build the graph, and the Reconciliation Pass to detect semantic conflicts and update confidence weights. |
+| `forget()` | [services/__init__.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py) | Enables user-triggered manual pruning, source-level forgetting, and automatic decay of stale nodes. |
 
 ---
 
@@ -91,7 +91,7 @@ Queries matching historical comparison patterns (e.g. "what changed since March?
 ---
 
 ## 7. Technical Stack
-- **Frontend**: Next.js 15 (App Router), Tailwind CSS, TypeScript, `react-force-graph-3d` for the node network.
+- **Frontend**: Next.js 16 (App Router), Tailwind CSS, TypeScript, `react-force-graph-3d` for the node network.
 - **Backend**: FastAPI (Python), SQLite metadata database ([database.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/database.py)), Cognee SDK, Gemini / Groq API wrappers.
 
 ---

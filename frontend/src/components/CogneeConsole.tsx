@@ -28,14 +28,15 @@ export default function CogneeConsole() {
 
     fetchLogs();
     
-    // Poll logs every 3.5 seconds
-    const interval = setInterval(fetchLogs, 3500);
+    // Fast polling (3.5s) if open, slow polling (30s) if closed to save resources
+    const pollInterval = isOpen ? 3500 : 30000;
+    const interval = setInterval(fetchLogs, pollInterval);
 
     return () => {
       active = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && consoleEndRef.current) {

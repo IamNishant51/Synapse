@@ -9,8 +9,6 @@ from models import (
     TimelinePoint,
     ConflictEvent,
     ResolveRequest,
-    ForgetNodeRequest,
-    ForgetSourceRequest,
     GraphSnapshot,
     GraphNode,
     GraphEdge,
@@ -439,7 +437,7 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest)
 
         # Reconciliation is best-effort — don't fail the source if it errors
         try:
-            new_nodes = await recon_task
+            await recon_task
             jobs[job_id].update({"progress": 100, "status": "completed"})
         except Exception as recon_err:
             print(f"[Reconciliation] failed for {req.label}: {recon_err}", flush=True)
