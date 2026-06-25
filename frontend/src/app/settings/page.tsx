@@ -5,6 +5,7 @@ import { getDecaySettings, updateDecaySettings, runDecayCheck, getSources, searc
 import type { Source } from "@/lib/types";
 import { useIngestion } from "@/context/IngestionContext";
 import { useToast } from "@/context/ToastContext";
+import { useAIConfig } from "@/context/AIConfigContext";
 
 function formatDate(iso: string) {
   try {
@@ -19,6 +20,7 @@ function formatDate(iso: string) {
 
 export default function SettingsPage() {
   const { addToast } = useToast();
+  const { config, openModal, disconnectAI } = useAIConfig();
   const { jobStatus, progress } = useIngestion();
   const [decayStart, setDecayStart] = useState(60);
   
@@ -200,6 +202,57 @@ export default function SettingsPage() {
             Control how Synapse manages confidence, pruning thresholds, and manual node forgetting across your knowledge graph.
           </p>
         </div>
+
+        {/* 0. Custom AI Configuration */}
+        <section className="mb-10">
+          <div className="caption-upper text-muted mb-3.5">Custom AI Configuration</div>
+          <div className="p-4 sm:p-6 md:p-8 rounded-2xl bg-surface-card border border-hairline shadow-[0_4px_16px_rgba(0,0,0,0.02)] space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-body-strong">Bring Your Own Key (BYOK)</h3>
+                <p className="text-xs text-muted-soft mt-1 leading-relaxed max-w-lg">
+                  Configure a custom provider API key to run queries, ingestions, and memory updates using models under your own account.
+                </p>
+              </div>
+              <button
+                onClick={openModal}
+                className="px-5 py-2.5 rounded-full bg-primary text-on-primary text-[14px] font-semibold hover:bg-primary-active active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-sm self-start sm:self-auto"
+              >
+                {config?.configured ? "Change AI Key" : "Configure AI"}
+              </button>
+            </div>
+
+            {config?.configured && (
+              <div className="pt-4 border-t border-hairline-soft flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface-strong/20 p-4 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm uppercase">
+                    {config.provider?.substring(0, 2)}
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-ink uppercase tracking-wider">{config.provider} Provider</div>
+                    <div className="text-sm text-body-strong font-mono mt-0.5">{config.model}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={disconnectAI}
+                  className="text-xs font-semibold text-semantic-error hover:underline cursor-pointer"
+                >
+                  Disconnect AI Key
+                </button>
+              </div>
+            )}
+            
+            {!config?.configured && (
+              <div className="pt-3.5 border-t border-hairline-soft text-xs text-muted leading-relaxed flex items-start gap-2 bg-surface-strong/10 p-3.5 rounded-xl">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0 mt-0.5">
+                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M7 4.5v3M7 9.5v.01" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+                <span>Currently using <strong>Server AI keys</strong>. No personal key has been configured for this session. Entering a personal key overrides the global configuration for your requests.</span>
+              </div>
+            )}
+          </div>
+        </section>
 
         {/* 1. Decay Settings */}
         <section className="mb-10">

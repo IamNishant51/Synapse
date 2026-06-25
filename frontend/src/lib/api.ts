@@ -128,3 +128,31 @@ export interface CogneeActivityLog {
 export async function getCogneeActivity(): Promise<CogneeActivityLog[]> {
   return fetchAPI("/cognee/activity");
 }
+
+export interface AIConfig {
+  configured: boolean;
+  provider?: string;
+  model?: string;
+}
+
+export async function getAIConfig(): Promise<AIConfig> {
+  return fetchAPI("/ai/config");
+}
+
+export async function saveAIConfig(provider: string, apiKey: string, model: string): Promise<{ status: string }> {
+  return fetchAPI("/ai/config", {
+    method: "POST",
+    body: JSON.stringify({ provider, apiKey, model }),
+  });
+}
+
+export async function deleteAIConfig(): Promise<{ status: string }> {
+  return fetchAPI("/ai/config", {
+    method: "DELETE",
+  });
+}
+
+export async function getAIModels(provider: string, key: string): Promise<{ models: string[] }> {
+  return fetchAPI(`/ai/models?provider=${encodeURIComponent(provider)}&key=${encodeURIComponent(key)}`);
+}
+

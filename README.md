@@ -80,6 +80,9 @@ Confidence scores of unreinforced graph nodes degrade over time (by 0.15 per swe
 ### 5.3 Temporal Query Diffs
 Queries matching historical comparison patterns (e.g. "what changed since March?") extract diff matrices outlining added nodes, deleted nodes, changed schemas, and newly recorded decisions.
 
+### 5.4 Bring-Your-Own-Key (BYOK) & Live Discovery
+Self-hosting users can connect their own accounts/keys for Groq, OpenAI, or Gemini. The application features a secure, guided 3-step setup: provider selection, API key validation, and live model list discovery. Keys are encrypted at rest using a symmetric cipher (`Fernet`) and never exposed in console logging or frontend payloads.
+
 ---
 
 ## 6. Known Limitations
@@ -87,6 +90,8 @@ Queries matching historical comparison patterns (e.g. "what changed since March?
 - **Authentication Model**: The security implementation relies on a Tier 1 shared-secret gateway rather than a full multi-tenant user authentication system, which is optimized for local testing and submission reviews.
 - **Chat History Persistence**: The chat conversation history in `/ask` is currently persisted in the browser's local storage (`localStorage`) rather than being stored on the server side.
 - **Database Scope**: The backend metadata is stored in a local SQLite database file, and the Cognee dataset configuration is configured for a single-user demo environment rather than multi-tenant enterprise scale.
+- **Cognee Per-Request LLM Isolation (Upstream Issue #2228)**: LLM configuration for Cognee's own internal pipeline (`remember`/`recall`/`improve`/`forget`) is applied per-request but relies on Cognee's global process-wide config state. This is fully safe under this project's single-session usage pattern, but would require request-scoped isolation (or waiting on Cognee's roadmap for issue #2228) before being run under highly concurrent multi-tenant loads.
+- **Judge Key Separation**: The judge access token (`SYNAPSE_ACCESS_KEY`) bypasses custom configuration entirely, ensuring judges use pre-configured server keys out-of-the-box without being prompted to configure personal keys.
 
 ---
 

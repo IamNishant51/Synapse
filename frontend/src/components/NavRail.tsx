@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useIngestion } from "@/context/IngestionContext";
+import { useAIConfig } from "@/context/AIConfigContext";
 
 const navItems = [
   { href: "/graph", label: "Graph", icon: GraphIcon },
@@ -16,6 +17,7 @@ const navItems = [
 export default function NavRail() {
   const pathname = usePathname();
   const { jobStatus, progress } = useIngestion();
+  const { config, openModal, loading: loadingAI } = useAIConfig();
 
   return (
     <aside className="fixed bottom-0 md:top-0 left-0 z-40 flex w-full h-14 md:h-full md:w-56 flex-row md:flex-col bg-canvas border-t md:border-t-0 md:border-r border-hairline">
@@ -64,19 +66,53 @@ export default function NavRail() {
       </nav>
 
       {/* Status bar */}
-      <div className="hidden md:block mt-auto px-4 pb-4">
+      <div className="hidden md:flex flex-col gap-2 mt-auto px-4 pb-4 w-full">
         {jobStatus === "running" ? (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-strong border border-hairline">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-strong border border-hairline w-full">
             <div className="w-2 h-2 rounded-full bg-semantic-success animate-pulse" />
             <span className="text-xs text-body">
               Syncing… <span className="text-[10px] text-muted">({progress}%)</span>
             </span>
           </div>
         ) : (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-strong">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-strong w-full">
             <div className="w-2 h-2 rounded-full bg-semantic-success" />
             <span className="text-xs text-muted">Memory active</span>
           </div>
+        )}
+
+        {/* AI Config Pill */}
+        {!loadingAI && config && (
+          config.configured ? (
+            <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-strong/60 border border-hairline-soft w-full">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                <span className="text-[11px] font-semibold text-body truncate capitalize">
+                  {config.provider} &middot; {config.model?.split("/").pop()}
+                </span>
+              </div>
+              <button
+                onClick={openModal}
+                className="text-muted hover:text-ink transition-colors cursor-pointer shrink-0 ml-1.5"
+                title="Configure custom AI"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-surface-strong/30 border border-hairline-soft/50 w-full">
+              <span className="text-[10px] text-muted-soft">Server AI active</span>
+              <button
+                onClick={openModal}
+                className="text-[10px] font-semibold text-primary hover:underline cursor-pointer"
+              >
+                Add custom AI
+              </button>
+            </div>
+          )
         )}
       </div>
     </aside>

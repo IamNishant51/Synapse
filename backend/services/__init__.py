@@ -59,6 +59,9 @@ from database import (
     db_update_decay_settings,
     db_update_source_content,
     db_get_source_content,
+    db_save_user_ai_config,
+    db_get_user_ai_config,
+    db_delete_user_ai_config,
 )
 db_init()
 
@@ -111,6 +114,35 @@ try:
 except Exception as e:
     print(f"[Cognee] Init failed: {e}", flush=True)
 
+def apply_cognee_llm_config():
+    if not COGNEE_READY:
+        return
+    config = db_get_user_ai_config()
+    if config:
+        provider = config["provider"]
+        api_key = config["api_key"]
+        model = config["model"]
+        
+        cognee.config.set_llm_provider(provider)
+        cognee.config.set_llm_model(f"{provider}/{model}" if not model.startswith(f"{provider}/") else model)
+        cognee.config.set_llm_api_key(api_key)
+        if provider == "groq":
+            cognee.config.set_llm_endpoint("https://api.groq.com/openai/v1")
+        else:
+            cognee.config.set_llm_endpoint("")
+        print(f"[Cognee] Applied BYOK configuration: {provider} ({model})", flush=True)
+    else:
+        if LLM_PROVIDER == "gemini" and GEMINI_API_KEY:
+            cognee.config.set_llm_provider("gemini")
+            cognee.config.set_llm_model(f"gemini/{GEMINI_MODEL}")
+            cognee.config.set_llm_api_key(GEMINI_API_KEY)
+            cognee.config.set_llm_endpoint("")
+        else:
+            cognee.config.set_llm_provider("openai")
+            cognee.config.set_llm_model(f"groq/{GROQ_MODEL}")
+            cognee.config.set_llm_api_key(GROQ_API_KEY)
+            cognee.config.set_llm_endpoint("https://api.groq.com/openai/v1")
+
 # ---- Rate limiting + caching for Groq LLM calls ----
 # Cache: LRU, max 64 entries, TTL 5 minutes
 _cache: OrderedDict[str, tuple[float, str]] = OrderedDict()
@@ -124,12 +156,8 @@ RATE_WINDOW = 60
 
 
 async def call_llm(prompt: str, system_prompt: str = "You are a precise, analytical assistant.", use_cache: bool = True) -> str:
-    if not HAS_LLM:
-        return ""
-
-    cache_key = hashlib.md5(f"{system_prompt}|{prompt}".encode()).hexdigest()
-
     # Check cache
+    cache_key = hashlib.md5(f"{system_prompt}|{prompt}".encode()).hexdigest()
     if use_cache and cache_key in _cache:
         ts, resp = _cache[cache_key]
         if time.time() - ts < CACHE_TTL:
@@ -148,32 +176,26 @@ async def call_llm(prompt: str, system_prompt: str = "You are a precise, analyti
     _last_calls.append(time.time())
 
     text = ""
-    # Try Gemini (primary), fall back to Groq
-    if LLM_PROVIDER == "gemini" and GEMINI_API_KEY:
-        try:
-            from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=GEMINI_API_KEY, base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
-            resp = await client.chat.completions.create(
-                model=GEMINI_MODEL,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.1,
-                max_tokens=1024,
-            )
-            text = resp.choices[0].message.content or ""
-        except Exception as e:
-            print(f"[LLM] Gemini failed: {e}", flush=True)
-            text = ""
+    config = db_get_user_ai_config()
 
-    # Fallback to Groq if Gemini failed or not configured
-    if not text and GROQ_API_KEY:
+    if config:
+        provider = config["provider"]
+        api_key = config["api_key"]
+        model = config["model"]
+        clean_model = model.split("/")[-1]
+        
+        from openai import AsyncOpenAI
+        if provider == "gemini":
+            base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+        elif provider == "groq":
+            base_url = "https://api.groq.com/openai/v1"
+        else:
+            base_url = "https://api.openai.com/v1"
+
         try:
-            from openai import AsyncOpenAI
-            client = AsyncOpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
             resp = await client.chat.completions.create(
-                model=GROQ_MODEL,
+                model=clean_model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": prompt},
@@ -183,7 +205,47 @@ async def call_llm(prompt: str, system_prompt: str = "You are a precise, analyti
             )
             text = resp.choices[0].message.content or ""
         except Exception as e:
-            print(f"[LLM] Groq fallback failed: {e}", flush=True)
+            print(f"[LLM] User BYOK {provider} failed: {e}", flush=True)
+            text = ""
+    else:
+        if not HAS_LLM:
+            return ""
+        # Try Gemini (primary), fall back to Groq
+        if LLM_PROVIDER == "gemini" and GEMINI_API_KEY:
+            try:
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(api_key=GEMINI_API_KEY, base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
+                resp = await client.chat.completions.create(
+                    model=GEMINI_MODEL,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.1,
+                    max_tokens=1024,
+                )
+                text = resp.choices[0].message.content or ""
+            except Exception as e:
+                print(f"[LLM] Gemini failed: {e}", flush=True)
+                text = ""
+
+        # Fallback to Groq if Gemini failed or not configured
+        if not text and GROQ_API_KEY:
+            try:
+                from openai import AsyncOpenAI
+                client = AsyncOpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
+                resp = await client.chat.completions.create(
+                    model=GROQ_MODEL,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=0.1,
+                    max_tokens=1024,
+                )
+                text = resp.choices[0].message.content or ""
+            except Exception as e:
+                print(f"[LLM] Groq fallback failed: {e}", flush=True)
 
     if text:
         _cache[cache_key] = (time.time(), text)
@@ -395,6 +457,7 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest)
         async def do_cognee():
             if not COGNEE_READY:
                 return
+            apply_cognee_llm_config()
             try:
                 truncated = content[:50000] if len(content) > 50000 else content
                 full = f"[Source: {req.label} | Type: {req.type} | Ingested: {datetime.now(timezone.utc).isoformat()}]\n\n{truncated}"
@@ -599,6 +662,7 @@ async def run_reconciliation(content: str, label: str, date: str) -> list[dict]:
 async def get_graph_snapshot() -> GraphSnapshot:
     # Try to fetch real graph data from Cognee first
     if COGNEE_READY:
+        apply_cognee_llm_config()
         try:
             nodes, edges = await cognee.get_memory_provenance_graph(include_memory=True)
             mapped_nodes = []
@@ -955,6 +1019,7 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
 
     # Enrich with Cognee recall results from the actual graph
     if COGNEE_READY:
+        apply_cognee_llm_config()
         try:
             cognee_results = await cognee.recall(
                 query_text=req.query,
@@ -1198,6 +1263,7 @@ async def resolve_conflict(req: ResolveRequest) -> None:
                 ))
                 # Forget the old superseded node in Cognee
                 if COGNEE_READY:
+                    apply_cognee_llm_config()
                     try:
                         await cognee.forget(data_id=c.oldNodeSummary, dataset=COGNEE_DATASET)
                         log_cognee_activity("forget()", f"Pruned superseded old claim on '{c.topic}'")
@@ -1221,6 +1287,7 @@ async def resolve_conflict(req: ResolveRequest) -> None:
                 ))
                 # Forget the new rejected node in Cognee
                 if COGNEE_READY:
+                    apply_cognee_llm_config()
                     try:
                         await cognee.forget(data_id=c.newNodeSummary, dataset=COGNEE_DATASET)
                         log_cognee_activity("forget()", f"Pruned rejected new claim on '{c.topic}'")
@@ -1287,6 +1354,7 @@ async def run_decay_check() -> DecayResult:
             c.status = "forgotten"
             forgotten += 1
             if COGNEE_READY:
+                apply_cognee_llm_config()
                 try:
                     await cognee.forget(data_id=c.oldNodeSummary, dataset=COGNEE_DATASET)
                     await cognee.forget(data_id=c.newNodeSummary, dataset=COGNEE_DATASET)
@@ -1332,6 +1400,7 @@ async def search_nodes(query: str) -> list[NodeSearchResult]:
 
 async def forget_node(node_id: str) -> None:
     if COGNEE_READY:
+        apply_cognee_llm_config()
         try:
             await cognee.forget(data_id=node_id, dataset=COGNEE_DATASET)
             log_cognee_activity("forget()", f"Pruned node ID '{node_id[:20]}' from graph")
@@ -1345,6 +1414,7 @@ async def forget_source(source_id: str) -> None:
     if target_source:
         db_delete_source(source_id)
         if COGNEE_READY:
+            apply_cognee_llm_config()
             try:
                 await cognee.forget(dataset=COGNEE_DATASET, data_id=target_source.label)
                 log_cognee_activity("forget()", f"Pruned source document '{target_source.label}'")

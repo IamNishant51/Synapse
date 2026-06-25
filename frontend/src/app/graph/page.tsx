@@ -10,6 +10,7 @@ import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { getConfidenceColor, tokens } from "@/lib/design-tokens";
 import { getGraphSnapshot, forgetNode, getConflictEvents, resetDemoData } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
+import { useAIConfig } from "@/context/AIConfigContext";
 import * as THREE from "three";
 import type { GraphNode, GraphEdge } from "@/lib/types";
 
@@ -221,6 +222,7 @@ function GraphLoadingSkeleton() {
 
 export default function GraphPage() {
   const router = useRouter();
+  const { config, openModal } = useAIConfig();
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
@@ -599,6 +601,30 @@ export default function GraphPage() {
       <div ref={containerRef} className="flex-1 relative h-full w-full min-w-0 min-h-0" onDoubleClick={handleBackgroundClick}>
         {loading && <GraphLoadingSkeleton />}
 
+        {!loading && config && !config.configured && (
+          <div className="absolute top-4 inset-x-4 md:top-6 md:inset-x-6 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-surface-card/85 border border-primary/20 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.03)] animate-fade-in">
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5 sm:mt-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <h4 className="text-sm font-semibold text-ink">Connect Your Custom AI Key</h4>
+                <p className="text-xs text-muted mt-0.5 leading-relaxed">
+                  Bring your own Groq, OpenAI, or Gemini key to enable personalized memory updates, custom LLM reasoning models, and bypass global rate limits.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={openModal}
+              className="px-5 py-2.5 rounded-full bg-primary text-on-primary text-xs font-semibold hover:bg-primary-active active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap shadow-sm self-start sm:self-auto"
+            >
+              Add AI Key
+            </button>
+          </div>
+        )}
+
         {error && (
           <div className="absolute inset-0 flex items-center justify-center z-10 bg-canvas">
             <EmptyState icon="graph" title="Could not load graph" description={error} />
@@ -745,7 +771,7 @@ export default function GraphPage() {
               </div>
             </div>
 
-            <div className="hidden md:flex absolute top-6 left-6 items-center gap-2.5 px-4 py-2 rounded-full bg-surface-card/85 backdrop-blur-md border border-hairline z-10 pointer-events-none shadow-sm">
+            <div className={`hidden md:flex absolute ${!config?.configured ? "top-28" : "top-6"} left-6 items-center gap-2.5 px-4 py-2 rounded-full bg-surface-card/85 backdrop-blur-md border border-hairline z-10 pointer-events-none shadow-sm transition-all duration-300`}>
               <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
                 <circle cx="6" cy="6" r="5" stroke="#777169" strokeWidth="1" />
                 <path d="M6 3v3l2 2" stroke="#777169" strokeWidth="1" strokeLinecap="round" />
@@ -755,7 +781,7 @@ export default function GraphPage() {
 
             <Link
               href="/resolve"
-              className="absolute top-4 md:top-6 right-4 md:right-6 flex items-center gap-2 px-4 py-2 rounded-full bg-surface-card border border-hairline z-10 hover:bg-surface-strong transition-all duration-150 cursor-pointer shadow-md"
+              className={`absolute ${!config?.configured ? "top-26 md:top-28" : "top-4 md:top-6"} right-4 md:right-6 flex items-center gap-2 px-4 py-2 rounded-full bg-surface-card border border-hairline z-10 hover:bg-surface-strong transition-all duration-300 cursor-pointer shadow-md`}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <circle cx="7" cy="7" r="6" stroke="#e0a328" strokeWidth="1.3" />

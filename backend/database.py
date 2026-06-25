@@ -1,6 +1,9 @@
 import sqlite3
 import os
+import base64
+import hashlib
 from typing import Optional, List
+from cryptography.fernet import Fernet
 from models import (
     Source,
     ConflictEvent,
@@ -93,6 +96,17 @@ def db_init():
     )
     """)
     
+    # 6. User AI Config table (BYOK)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_ai_config (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        provider TEXT NOT NULL,
+        api_key_encrypted TEXT NOT NULL,
+        model TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """)
+    
     # Insert default decay settings if not present
     cursor.execute("SELECT COUNT(*) FROM decay_settings")
     if cursor.fetchone()[0] == 0:
@@ -153,6 +167,71 @@ def db_init():
         # Mark as seeded
         cursor.execute("INSERT INTO db_metadata (key, value) VALUES ('seeded', '1')")
 
+    conn.commit()
+    conn.close()
+
+# Encryption helpers for BYOK
+def get_encryption_key() -> bytes:
+    key_str = os.environ.get("SYNAPSE_ENCRYPTION_KEY")
+    if not key_str:
+        access_key = os.environ.get("SYNAPSE_ACCESS_KEY", "default-fallback-encryption-key-12345")
+        hasher = hashlib.sha256(access_key.encode())
+        return base64.urlsafe_b64encode(hasher.digest())
+    try:
+        return key_str.encode()
+    except Exception:
+        hasher = hashlib.sha256(key_str.encode())
+        return base64.urlsafe_b64encode(hasher.digest())
+
+def encrypt_key(plain_key: str) -> str:
+    f = Fernet(get_encryption_key())
+    return f.encrypt(plain_key.encode()).decode()
+
+def decrypt_key(encrypted_key: str) -> str:
+    f = Fernet(get_encryption_key())
+    return f.decrypt(encrypted_key.encode()).decode()
+
+# User AI Config operations
+def db_save_user_ai_config(provider: str, api_key: str, model: str):
+    encrypted = encrypt_key(api_key)
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    INSERT INTO user_ai_config (id, provider, api_key_encrypted, model, updated_at)
+    VALUES (1, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+        provider = excluded.provider,
+        api_key_encrypted = excluded.api_key_encrypted,
+        model = excluded.model,
+        updated_at = excluded.updated_at
+    """, (provider, encrypted, model, now))
+    conn.commit()
+    conn.close()
+
+def db_get_user_ai_config() -> Optional[dict]:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT provider, api_key_encrypted, model FROM user_ai_config WHERE id = 1")
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    try:
+        decrypted = decrypt_key(row["api_key_encrypted"])
+    except Exception:
+        decrypted = ""
+    return {
+        "provider": row["provider"],
+        "api_key": decrypted,
+        "model": row["model"]
+    }
+
+def db_delete_user_ai_config():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM user_ai_config WHERE id = 1")
     conn.commit()
     conn.close()
 

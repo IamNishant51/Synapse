@@ -5,6 +5,13 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
+import httpx
+from pydantic import BaseModel
+from database import (
+    db_save_user_ai_config,
+    db_get_user_ai_config,
+    db_delete_user_ai_config,
+)
 from models import (
     IngestRequest,
     RecallRequest,
@@ -30,6 +37,7 @@ from services import (
     forget_source,
     reset_demo_data,
     get_cognee_activities,
+    apply_cognee_llm_config,
 )
 
 limiter = Limiter(key_func=get_remote_address)
@@ -157,3 +165,86 @@ async def reset_demo_endpoint():
 @app.get("/cognee/activity")
 async def cognee_activity_endpoint():
     return get_cognee_activities()
+
+
+class AIConfigRequest(BaseModel):
+    provider: str
+    apiKey: str
+    model: str
+
+
+@app.get("/ai/models")
+@limiter.limit("10/minute")
+async def get_ai_models(request: Request, provider: str, key: str):
+    if not key or not provider:
+        raise HTTPException(status_code=400, detail="Provider and key are required")
+        
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            if provider == "groq":
+                headers = {"Authorization": f"Bearer {key}"}
+                r = await client.get("https://api.groq.com/openai/v1/models", headers=headers)
+                if r.status_code != 200:
+                    raise HTTPException(status_code=r.status_code, detail=f"Groq API error: {r.text}")
+                data = r.json()
+                models = [m["id"] for m in data.get("data", [])]
+                
+            elif provider == "openai":
+                headers = {"Authorization": f"Bearer {key}"}
+                r = await client.get("https://api.openai.com/v1/models", headers=headers)
+                if r.status_code != 200:
+                    raise HTTPException(status_code=r.status_code, detail=f"OpenAI API error: {r.text}")
+                data = r.json()
+                models = [m["id"] for m in data.get("data", [])]
+                
+            elif provider == "gemini":
+                r = await client.get(f"https://generativelanguage.googleapis.com/v1beta/models?key={key}")
+                if r.status_code != 200:
+                    raise HTTPException(status_code=r.status_code, detail=f"Gemini API error: {r.text}")
+                data = r.json()
+                models_raw = data.get("models", [])
+                models = []
+                for m in models_raw:
+                    if "generateContent" in m.get("supportedGenerationMethods", []):
+                        name = m.get("name", "")
+                        clean_name = name.split("/")[-1] if "/" in name else name
+                        models.append(clean_name)
+            else:
+                raise HTTPException(status_code=400, detail="Invalid provider")
+                
+            models = sorted(list(set(models)))
+            return {"models": models}
+            
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to connect to provider: {str(e)}")
+
+
+@app.get("/ai/config")
+async def get_ai_config_endpoint():
+    config = db_get_user_ai_config()
+    if config:
+        return {
+            "configured": True,
+            "provider": config["provider"],
+            "model": config["model"]
+        }
+    return {"configured": False}
+
+
+@app.post("/ai/config")
+@limiter.limit("5/minute")
+async def save_ai_config_endpoint(request: Request, config_req: AIConfigRequest):
+    if not config_req.provider or not config_req.apiKey or not config_req.model:
+        raise HTTPException(status_code=400, detail="Missing required configuration fields")
+    
+    db_save_user_ai_config(config_req.provider, config_req.apiKey, config_req.model)
+    apply_cognee_llm_config()
+    return {"status": "ok"}
+
+
+@app.delete("/ai/config")
+async def delete_ai_config_endpoint():
+    db_delete_user_ai_config()
+    apply_cognee_llm_config()
+    return {"status": "ok"}
+
