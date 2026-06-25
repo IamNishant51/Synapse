@@ -698,16 +698,16 @@ export default function GraphPage() {
                   linkDirectionalParticleSpeed={(link) => isConnectedToActiveNode(link) ? 0.015 : 0.003}
                   linkDirectionalParticleCanvasObject={(x: number, y: number, link: any, ctx: CanvasRenderingContext2D) => {
                     const isActive = isConnectedToActiveNode(link);
-                    const size = isActive ? 2.5 : 1.2;
+                    const size = 1.2;
 
                     ctx.save();
                     ctx.beginPath();
                     ctx.arc(x, y, size, 0, 2 * Math.PI, false);
 
                     if (isActive) {
-                      ctx.shadowColor = "rgba(94, 106, 210, 0.95)";
+                      ctx.shadowColor = "rgba(217, 119, 6, 0.85)";
                       ctx.shadowBlur = 12;
-                      ctx.fillStyle = "#5e6ad2";
+                      ctx.fillStyle = "#d97706";
                     } else {
                       ctx.shadowColor = "rgba(168, 162, 158, 0.35)";
                       ctx.shadowBlur = 4;
@@ -739,7 +739,7 @@ export default function GraphPage() {
                   linkDirectionalParticles={(link) => isConnectedToActiveNode(link) ? 4 : 1}
                   linkDirectionalParticleSpeed={(link) => isConnectedToActiveNode(link) ? 0.015 : 0.003}
                   linkDirectionalParticleWidth={(link) => isConnectedToActiveNode(link) ? 2.5 : 1.2}
-                  linkDirectionalParticleColor={(link) => isConnectedToActiveNode(link) ? "#5e6ad2" : "#a8a29e"}
+                  linkDirectionalParticleColor={(link) => isConnectedToActiveNode(link) ? "#d97706" : "#a8a29e"}
                   linkCurvature={0.05}
                   onNodeClick={handleNodeClick}
                   onNodeHover={setHoveredNode}
