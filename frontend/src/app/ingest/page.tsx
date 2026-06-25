@@ -311,7 +311,7 @@ export default function IngestPage() {
             <button
               onClick={jobStatus === "completed" ? handleReset : handleSync}
               disabled={isDisabled && jobStatus !== "completed"}
-              className={`px-6 py-3 rounded-full text-[15px] font-medium transition-all duration-200 cursor-pointer shadow-sm ${
+              className={`px-6 py-3 rounded-full text-[15px] font-medium transition-all duration-200 cursor-pointer shadow-sm whitespace-nowrap ${
                 jobStatus === "completed"
                   ? "bg-surface-strong text-body border border-hairline-strong hover:bg-surface-strong/80"
                   : "bg-primary text-on-primary hover:bg-primary-active active:scale-[0.98]"

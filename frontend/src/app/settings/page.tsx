@@ -216,7 +216,7 @@ export default function SettingsPage() {
               </div>
               <button
                 onClick={openModal}
-                className="px-5 py-2.5 rounded-full bg-primary text-on-primary text-[14px] font-semibold hover:bg-primary-active active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-sm self-start sm:self-auto"
+                className="px-5 py-2.5 rounded-full bg-primary text-on-primary text-[14px] font-semibold hover:bg-primary-active active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-sm self-start sm:self-auto whitespace-nowrap"
               >
                 {(config?.configured || isJudgeAuthorized) ? "Change Credentials" : "Configure AI"}
               </button>
