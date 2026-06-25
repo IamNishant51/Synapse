@@ -228,7 +228,18 @@ export default function GraphPage() {
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const showAIBanner = !loading && config && !config.configured && !isJudgeAuthorized;
+  const [isBannerDismissed, setIsBannerDismissed] = useState(true);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const dismissed = localStorage.getItem("synapse_dismiss_ai_banner") === "true";
+      Promise.resolve().then(() => {
+        setIsBannerDismissed(dismissed);
+      });
+    }
+  }, []);
+
+  const showAIBanner = !loading && config && !config.configured && !isJudgeAuthorized && !isBannerDismissed;
   const [error, setError] = useState<string | null>(null);
   const [conflictCount, setConflictCount] = useState(0);
   const [prevScore] = useState<number | null>(() => {
@@ -603,14 +614,14 @@ export default function GraphPage() {
         {loading && <GraphLoadingSkeleton />}
 
         {showAIBanner && (
-          <div className="absolute top-4 inset-x-4 md:top-6 md:inset-x-6 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-surface-card/85 border border-primary/20 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.03)] animate-fade-in">
+          <div className="absolute top-4 inset-x-4 md:top-6 md:inset-x-6 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 pr-10 sm:pr-4 rounded-xl bg-surface-card/85 border border-primary/20 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.03)] animate-fade-in relative">
             <div className="flex items-start gap-3">
               <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5 sm:mt-0">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
                 </svg>
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 pr-4 sm:pr-0">
                 <h4 className="text-sm font-semibold text-ink">Connect Your Custom AI Key</h4>
                 <p className="text-xs text-muted mt-0.5 leading-relaxed">
                   Bring your own Groq, OpenAI, or Gemini key to enable personalized memory updates, custom LLM reasoning models, and bypass global rate limits.
@@ -619,9 +630,21 @@ export default function GraphPage() {
             </div>
             <button
               onClick={openModal}
-              className="px-5 py-2.5 rounded-full bg-primary text-on-primary text-xs font-semibold hover:bg-primary-active active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap shadow-sm self-start sm:self-auto"
+              className="px-5 py-2.5 rounded-full bg-primary text-on-primary text-xs font-semibold hover:bg-primary-active active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap shadow-sm self-start sm:self-auto shrink-0"
             >
               Add AI Key
+            </button>
+            <button
+              onClick={() => {
+                setIsBannerDismissed(true);
+                localStorage.setItem("synapse_dismiss_ai_banner", "true");
+              }}
+              className="absolute top-3.5 right-3 p-1 rounded-lg text-muted hover:text-ink hover:bg-surface-strong transition-colors cursor-pointer"
+              aria-label="Dismiss banner"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M4 12L12 4M4 4l8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
             </button>
           </div>
         )}
