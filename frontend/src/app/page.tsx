@@ -392,7 +392,7 @@ export default function LandingPage() {
 
   const enter = () => {
     setEntering(true);
-    setTimeout(() => router.push("/login"), 500);
+    setTimeout(() => router.push("/graph"), 500);
   };
 
 
@@ -436,7 +436,7 @@ export default function LandingPage() {
             <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Reconciliation</a>
             <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Memory Health</a>
             <a href="https://github.com/IamNishant51/Synapse----Ai-" target="_blank" rel="noreferrer" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">GitHub</a>
-            <a href="/login" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Sign In</a>
+            <a href="/settings" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Sign In</a>
             <button onClick={enter}
               className="px-5 py-2.5 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-[#0c0a09] transition-all duration-300 cursor-pointer">
               Open App
@@ -462,7 +462,7 @@ export default function LandingPage() {
             <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">Reconciliation</a>
             <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">Memory Health</a>
             <a href="https://github.com/IamNishant51/Synapse----Ai-" target="_blank" rel="noreferrer" onClick={() => setIsMobileMenuOpen(false)} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors w-full py-1">GitHub</a>
-            <a href="/login" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors w-full py-1">Sign In</a>
+            <a href="/settings" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors w-full py-1">Sign In</a>
             <button onClick={enter}
               className="w-full text-center px-5 py-2.5 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-[#0c0a09] transition-all duration-300">
               Open App

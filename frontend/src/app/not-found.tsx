@@ -32,7 +32,7 @@ export default function NotFound() {
             Go Back Home
           </Link>
           <Link
-            href="/login"
+            href="/settings"
             className="flex-1 text-center py-2.5 rounded-full bg-surface-strong border border-hairline-strong text-ink text-[14px] font-medium hover:bg-surface-card-active active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-sm"
           >
             Sign In
