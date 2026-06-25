@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     siteName: "Synapse",
     images: [
       {
-        url: "/images/og-image.png",
+        url: "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/og-image.png",
         width: 1200,
         height: 630,
         alt: "Synapse Metadata Graph and memory visualization",
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Synapse — A memory that knows when to update itself",
     description: "A self-organizing personal knowledge graph built on Cognee's memory lifecycle.",
-    images: ["/images/og-image.png"],
+    images: ["https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/og-image.png"],
   },
 };
 

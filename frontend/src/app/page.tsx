@@ -111,6 +111,7 @@ export default function LandingPage() {
   const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [logoError, setLogoError] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
 
@@ -421,12 +422,13 @@ export default function LandingPage() {
         <div className="max-w-[1200px] mx-auto px-6 h-full flex items-center justify-between">
           <a href="#hero" onClick={(e) => handleNavClick(e, "#hero")} className="flex items-center gap-2 cursor-pointer" aria-label="Scroll to top">
             <Image
-              src="/images/synapse-logo.png"
+              src={logoError ? "/images/synapse-logo.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
               alt="Synapse Logo"
               width={100}
               height={28}
               priority
               className="object-contain"
+              onError={() => setLogoError(true)}
             />
           </a>
 
@@ -880,7 +882,7 @@ export default function LandingPage() {
             <div id="resolve-screenshot-wrapper" className="mt-8 w-full max-w-[460px] opacity-0 relative z-20">
               <BrowserChrome url="localhost:3000/resolve">
                 <Image
-                  src="/images/resolve_screenshot.jpg"
+                  src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/resolve_screenshot.jpg"
                   alt="Synapse Resolve Screen"
                   width={800}
                   height={450}
@@ -935,7 +937,7 @@ export default function LandingPage() {
           {/* Right Column: Memory Decay Illustration */}
           <div className="md:col-span-6 flex justify-center items-center relative h-[260px] sm:h-[320px] md:h-[380px] bg-white border border-[#e7e5e4] rounded-3xl overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.02)] select-none">
             <Image
-              src="/images/memory-decay.webp"
+              src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/memory-decay.webp"
               alt="Memory Decay Illustration"
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
@@ -967,7 +969,7 @@ export default function LandingPage() {
           <div className="md:col-span-7 flex flex-col items-center gap-6 relative w-full">
             <div className="relative z-10 w-full overflow-hidden rounded-2xl border border-[#e7e5e4] shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
               <Image
-                src="/images/graph_screenshot.jpg"
+                src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/graph_screenshot.jpg"
                 alt="Synapse Metadata Graph Screen"
                 width={800}
                 height={450}
@@ -1001,7 +1003,7 @@ export default function LandingPage() {
             <div 
               className="p-8 rounded-3xl border border-[#e7e5e4]/50 flex flex-col justify-end min-h-[300px] md:col-span-2 relative overflow-hidden group shadow-[0_4px_16px_rgba(0,0,0,0.02)]"
               style={{ 
-                backgroundImage: "url('/images/capabilities-sphere.webp')",
+                backgroundImage: "url('https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/capabilities-sphere.webp')",
                 backgroundSize: "cover",
                 backgroundPosition: "center"
               }}
@@ -1208,11 +1210,12 @@ export default function LandingPage() {
           {/* Column 1: Brand details */}
           <div className="col-span-2 flex flex-col items-start gap-4">
             <Image
-              src="/images/synapse-logo.png"
+              src={logoError ? "/images/synapse-logo.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
               alt="Synapse Logo"
               width={80}
               height={22}
               className="object-contain"
+              onError={() => setLogoError(true)}
             />
             <p className="max-w-[200px] text-[#777169] leading-relaxed">
               Autonomous memory visualization layers running on top of Cognee&apos;s semantic engine.

@@ -26,6 +26,15 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "ik.imagekit.io",
+        pathname: "/9pfz6g8ri/**",
+      },
+    ],
+  },
   turbopack: {
     resolveAlias: {
       three: "./node_modules/three",
