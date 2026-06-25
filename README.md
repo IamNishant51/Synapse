@@ -1,6 +1,20 @@
 # Synapse: The Autonomous Memory Dashboard
 
-**[Watch the 100-Second Demo Video (Coming Soon)](#)** | **Built by [Nishant Unavane](https://nishantunavane.qzz.io)**
+**[Live Demo](https://synapse-knowledge.vercel.app)** | **[Watch the 100-Second Demo Video (Coming Soon)](#)** | **Built by [Nishant Unavane](https://nishantunavane.qzz.io)**
+
+## 🔑 For Judges — Quick Access
+
+**Live demo:** [https://synapse-knowledge.vercel.app](https://synapse-knowledge.vercel.app)
+
+No setup required. Open the link above, click **"Add AI"** on the dashboard (or in Settings), choose **"Judge Access Token"**, and paste the key below:
+
+```
+SYNAPSE-JUDGE-19a3ea7d233f556aaed6e00feb9a4096
+```
+
+This runs the app on our own pre-configured server keys — you don't need a personal API key for Groq, OpenAI, or Gemini. The "Bring Your Own Key" option on the same screen is for anyone self-hosting their own copy with their own provider account; judges should use the token above instead.
+
+---
 
 Synapse is a self-organizing memory layers dashboard built on Cognee to handle dynamic context updates, contradiction management, and automatic memory decay.
 
@@ -91,7 +105,8 @@ Self-hosting users can connect their own accounts/keys for Groq, OpenAI, or Gemi
 - **Chat History Persistence**: The chat conversation history in `/ask` is currently persisted in the browser's local storage (`localStorage`) rather than being stored on the server side.
 - **Database Scope**: The backend metadata is stored in a local SQLite database file, and the Cognee dataset configuration is configured for a single-user demo environment rather than multi-tenant enterprise scale.
 - **Cognee Per-Request LLM Isolation (Upstream Issue #2228)**: LLM configuration for Cognee's own internal pipeline (`remember`/`recall`/`improve`/`forget`) is applied per-request but relies on Cognee's global process-wide config state. This is fully safe under this project's single-session usage pattern, but would require request-scoped isolation (or waiting on Cognee's roadmap for issue #2228) before being run under highly concurrent multi-tenant loads.
-- **Judge Key Separation**: The judge access token (`SYNAPSE_ACCESS_KEY`) bypasses custom configuration entirely, ensuring judges use pre-configured server keys out-of-the-box without being prompted to configure personal keys.
+- **Judge Key Separation**: The judge access token (see "For Judges — Quick Access" above) is checked only on the three endpoints that spend the server's own LLM budget (`/ingest`, `/recall`, `/reconciliation/resolve`) — every other page and feature is open by default, with no login wall. Entering a personal BYOK key always takes priority over the judge token for that session, so the two paths never conflict with each other.
+- **Public Access Token**: The judge token above is intentionally published in this README for frictionless review access, rather than sent privately — treat it as disposable; it will be rotated or disabled once judging concludes.
 
 ---
 
@@ -123,6 +138,11 @@ Self-hosting users can connect their own accounts/keys for Groq, OpenAI, or Gemi
    LLM_MODEL=gemini/gemini-2.5-flash
    GEMINI_API_KEY=your_gemini_key
    GROQ_API_KEY=your_groq_fallback_key
+
+   # Required for the judge-access-token flow described above.
+   # If unset, /ingest, /recall, and /reconciliation/resolve fail closed (by design).
+   SYNAPSE_ACCESS_KEY=generate-a-long-random-string-here
+   FRONTEND_URL=http://localhost:3000
    ```
 5. Start the backend server:
    ```bash
