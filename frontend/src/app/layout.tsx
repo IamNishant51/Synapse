@@ -20,9 +20,9 @@ export const metadata: Metadata = {
   description: "A self-organizing personal knowledge graph that ingests everything you read, write, and build — and actively maintains itself.",
   manifest: "/site.webmanifest",
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    icon: "/favicon.ico?v=3",
+    shortcut: "/favicon.ico?v=3",
+    apple: "/apple-touch-icon.png?v=3",
   },
   openGraph: {
     title: "Synapse — A memory that knows when to update itself",
