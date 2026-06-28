@@ -437,7 +437,7 @@ export default function LandingPage() {
             <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">How it works</a>
             <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Reconciliation</a>
             <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Memory Health</a>
-            <a href="https://github.com/IamNishant51/Synapse----Ai-" target="_blank" rel="noreferrer" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">GitHub</a>
+            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">GitHub</a>
             <a href="/settings" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Sign In</a>
             <button onClick={enter}
               className="px-5 py-2.5 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-[#0c0a09] transition-all duration-300 cursor-pointer">
@@ -463,7 +463,7 @@ export default function LandingPage() {
             <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">How it works</a>
             <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">Reconciliation</a>
             <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">Memory Health</a>
-            <a href="https://github.com/IamNishant51/Synapse----Ai-" target="_blank" rel="noreferrer" onClick={() => setIsMobileMenuOpen(false)} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors w-full py-1">GitHub</a>
+            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" onClick={() => setIsMobileMenuOpen(false)} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors w-full py-1">GitHub</a>
             <a href="/settings" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors w-full py-1">Sign In</a>
             <button onClick={enter}
               className="w-full text-center px-5 py-2.5 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-[#0c0a09] transition-all duration-300">
@@ -491,7 +491,7 @@ export default function LandingPage() {
                 className="px-6 py-3 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-[#0c0a09] transition-all duration-300 cursor-pointer disabled:opacity-50 w-full sm:w-auto text-center justify-center flex">
                 {entering ? "Opening…" : "Open the App"}
               </button>
-              <a href="https://github.com/IamNishant51/Synapse----Ai-" target="_blank" rel="noreferrer"
+              <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer"
                 className="px-6 py-3 rounded-full border border-[#d6d3d1] text-[15px] font-medium text-[#0c0a09] hover:bg-[#f0efed] transition-all duration-300 cursor-pointer w-full sm:w-auto text-center justify-center flex">
                 View on GitHub
               </a>
@@ -1233,9 +1233,9 @@ export default function LandingPage() {
           {/* Column 3: Resources */}
           <div className="flex flex-col gap-3">
             <span className="font-semibold text-[#0c0a09] uppercase tracking-wider text-[10px]">Resources</span>
-            <a href="https://github.com/IamNishant51/Synapse----Ai-" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">GitHub</a>
-            <a href="https://github.com/IamNishant51/Synapse----Ai-/blob/main/README.md" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Documentation</a>
-            <a href="https://github.com/IamNishant51/Synapse----Ai-" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Video Demo</a>
+            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">GitHub</a>
+            <a href="https://github.com/IamNishant51/Synapse-Ai/blob/main/README.md" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Documentation</a>
+            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Video Demo</a>
           </div>
 
           {/* Column 4: Tech Stack */}
@@ -1250,7 +1250,7 @@ export default function LandingPage() {
 
         <div className="max-w-[1200px] mx-auto mt-16 pt-8 border-t border-[#e7e5e4] flex flex-col md:flex-row items-center justify-between gap-4 text-[#777169]">
           <p>© 2026 Synapse AI. Built for WeMakeDevs x Cognee Hackathon.</p>
-          <a href="https://github.com/IamNishant51/Synapse----Ai-" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Repository Home</a>
+          <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Repository Home</a>
         </div>
       </footer>
     </div>

@@ -1,7 +1,7 @@
 # Synapse: The Autonomous Memory Dashboard
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![CI](https://github.com/IamNishant51/Synapse----Ai-/actions/workflows/ci.yml/badge.svg)](https://github.com/IamNishant51/Synapse----Ai-/actions/workflows/ci.yml)
+[![CI](https://github.com/IamNishant51/Synapse-Ai/actions/workflows/ci.yml/badge.svg)](https://github.com/IamNishant51/Synapse-Ai/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 **[Live Demo](https://synapse-knowledge.vercel.app)** |
@@ -75,10 +75,10 @@ Synapse integrates Cognee's memory lifecycle APIs directly to solve the context 
 
 | Cognee Operation | Code Location | Synapse Application Feature |
 |---|---|---|
-| `remember()` | [services/__init__.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py) | Ingests PDF files, GitHub repositories, ChatGPT exports, articles, and YouTube transcripts. |
-| `recall()` | [services/__init__.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py) | Powers graph-grounded, time-aware chat queries ("what did I believe before vs now"). |
-| `improve()` / `cognify()` | [services/__init__.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py) | Runs the `cognify` step to build the graph, and the Reconciliation Pass to detect semantic conflicts and update confidence weights. |
-| `forget()` | [services/__init__.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/services/__init__.py) | Enables user-triggered manual pruning, source-level forgetting, and automatic decay of stale nodes. |
+| `remember()` | [services/__init__.py](https://github.com/IamNishant51/Synapse-Ai/blob/main/backend/services/__init__.py) | Ingests PDF files, GitHub repositories, ChatGPT exports, articles, and YouTube transcripts. |
+| `recall()` | [services/__init__.py](https://github.com/IamNishant51/Synapse-Ai/blob/main/backend/services/__init__.py) | Powers graph-grounded, time-aware chat queries ("what did I believe before vs now"). |
+| `improve()` / `cognify()` | [services/__init__.py](https://github.com/IamNishant51/Synapse-Ai/blob/main/backend/services/__init__.py) | Runs the `cognify` step to build the graph, and the Reconciliation Pass to detect semantic conflicts and update confidence weights. |
+| `forget()` | [services/__init__.py](https://github.com/IamNishant51/Synapse-Ai/blob/main/backend/services/__init__.py) | Enables user-triggered manual pruning, source-level forgetting, and automatic decay of stale nodes. |
 
 ---
 
@@ -109,7 +109,7 @@ Self-hosting users can connect their own accounts/keys for Groq, OpenAI, or Gemi
 
 ## 7. Technical Stack
 - **Frontend**: Next.js 16 (App Router), Tailwind CSS, TypeScript, `react-force-graph-3d` for the node network.
-- **Backend**: FastAPI (Python), SQLite/PostgreSQL metadata database ([database.py](https://github.com/IamNishant51/Synapse----Ai-/blob/main/backend/database.py)), Cognee SDK, Gemini / Groq API wrappers.
+- **Backend**: FastAPI (Python), SQLite/PostgreSQL metadata database ([database.py](https://github.com/IamNishant51/Synapse-Ai/blob/main/backend/database.py)), Cognee SDK, Gemini / Groq API wrappers.
 
 ---
 
@@ -164,7 +164,7 @@ Self-hosting users can connect their own accounts/keys for Groq, OpenAI, or Gemi
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, code conventions, and the pull request process. This project also uses a [Code of Conduct](CODE_OF_CONDUCT.md) and has a [security policy](SECURITY.md).
 
-Look for issues tagged [`good first issue`](https://github.com/IamNishant51/Synapse----Ai-/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) for well-scoped starting points.
+Look for issues tagged [`good first issue`](https://github.com/IamNishant51/Synapse-Ai/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) for well-scoped starting points.
 
 ---
 
