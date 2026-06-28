@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 export default function ProvenancePage() {
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     fetch("/api/proxy/provenance")
@@ -39,8 +41,10 @@ export default function ProvenancePage() {
         &larr; Back
       </Link>
       <iframe
+        ref={iframeRef}
         srcDoc={html}
-        className="w-full h-full border-0"
+        onLoad={() => setLoaded(true)}
+        className={`w-full h-full border-0 transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
         title="Memory Provenance"
         sandbox="allow-scripts"
       />
