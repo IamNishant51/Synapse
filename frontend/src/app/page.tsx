@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useTheme } from "next-themes";
+import { useSession } from "next-auth/react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -10,7 +12,7 @@ import Lenis from "lenis";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
-const SparkleIcon = ({ className = "w-4 h-4 text-[#777169]/40" }: { className?: string }) => (
+const SparkleIcon = ({ className = "w-4 h-4 text-[var(--color-muted)]/40" }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
     <path d="M12 0L14.5 9.5L24 12L14.5 14.5L12 24L9.5 14.5L0 12L9.5 9.5Z" />
   </svg>
@@ -19,21 +21,21 @@ const SparkleIcon = ({ className = "w-4 h-4 text-[#777169]/40" }: { className?: 
 const SectionLabel = ({ text, color = "bg-[#f4c5a8]" }: { text: string; color?: string }) => (
   <div className="flex items-center gap-2 mb-6 justify-start">
     <span className={`w-1.5 h-1.5 rounded-full ${color}`} />
-    <span className="caption-uppercase tracking-[0.08em] text-xs font-semibold text-[#777169]">{text}</span>
+    <span className="caption-uppercase tracking-[0.08em] text-xs font-semibold text-[var(--color-muted)]">{text}</span>
   </div>
 );
 
 const BrowserChrome = ({ children, className = "", url = "localhost:3000" }: { children: React.ReactNode; className?: string; url?: string }) => (
-  <div className={`w-full bg-[#f5f5f5] rounded-2xl border border-[#e7e5e4] shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden ${className}`}>
-    <div className="bg-[#f0efed] px-4 py-2.5 border-b border-[#e7e5e4] flex items-center gap-1.5 select-none pointer-events-none">
+  <div className={`w-full bg-[var(--color-canvas)] rounded-2xl border border-[var(--color-hairline)] shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden ${className}`}>
+    <div className="bg-[var(--color-surface-strong)] px-4 py-2.5 border-b border-[var(--color-hairline)] flex items-center gap-1.5 select-none pointer-events-none">
       <div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]/40" />
       <div className="w-2.5 h-2.5 rounded-full bg-[#eab308]/40" />
       <div className="w-2.5 h-2.5 rounded-full bg-[#22c55e]/40" />
-      <div className="h-4.5 bg-white/60 border border-[#e7e5e4] rounded-md text-[9px] text-[#777169] px-4 ml-4 flex items-center flex-1 max-w-[240px] font-mono tracking-tight overflow-hidden text-ellipsis whitespace-nowrap">
+      <div className="h-4.5 bg-[var(--color-surface-card)]/60 border border-[var(--color-hairline)] rounded-md text-[9px] text-[var(--color-muted)] px-4 ml-4 flex items-center flex-1 max-w-[240px] font-mono tracking-tight overflow-hidden text-ellipsis whitespace-nowrap">
         {url}
       </div>
     </div>
-    <div className="relative bg-white w-full">
+    <div className="relative bg-[var(--color-surface-card)] w-full">
       {children}
     </div>
   </div>
@@ -53,14 +55,14 @@ const FAQItem = ({ question, answer, isOpen, onClick }: { question: string; answ
   }, [isOpen]);
 
   return (
-    <div className="border border-[#e7e5e4] rounded-2xl bg-white overflow-hidden transition-all duration-300">
+    <div className="border border-[var(--color-hairline)] rounded-2xl bg-[var(--color-surface-card)] overflow-hidden transition-all duration-300">
       <button
         onClick={onClick}
-        className="w-full flex items-center justify-between p-6 text-left font-medium text-[#0c0a09] hover:text-[#0c0a09] transition-colors focus:outline-none"
+        className="w-full flex items-center justify-between p-6 text-left font-medium text-[var(--color-ink)] hover:text-[var(--color-ink)] transition-colors focus:outline-none"
       >
         <span className="text-base font-medium">{question}</span>
         <svg
-          className={`w-5 h-5 text-[#777169] transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+          className={`w-5 h-5 text-[var(--color-muted)] transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
           fill="none"
           stroke="currentColor"
           strokeWidth="1.5"
@@ -74,7 +76,7 @@ const FAQItem = ({ question, answer, isOpen, onClick }: { question: string; answ
         style={{ height: 0, opacity: 0 }}
         className="overflow-hidden"
       >
-        <div className="px-6 pb-6 text-sm text-[#4e4e4e] leading-relaxed border-t border-[#e7e5e4]/50 pt-4">
+        <div className="px-6 pb-6 text-sm text-[var(--color-body)] leading-relaxed border-t border-[var(--color-hairline)]/50 pt-4">
           {answer}
         </div>
       </div>
@@ -107,6 +109,9 @@ const faqs = [
 
 export default function LandingPage() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const { data: session } = useSession();
+  const [mounted, setMounted] = useState(false);
   const [entering, setEntering] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -130,6 +135,10 @@ export default function LandingPage() {
     }
     setIsMobileMenuOpen(false);
   };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -343,34 +352,6 @@ export default function LandingPage() {
                duration: 1.2 
              }, 0);
 
-      /* ── Section 7: Graph Preview Parallax ── */
-      gsap.from(".graph-node-group-1", {
-        y: -40,
-        scrollTrigger: {
-          trigger: "#section-graph-preview",
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 1.5
-        }
-      });
-      gsap.from(".graph-node-group-2", {
-        y: 30,
-        scrollTrigger: {
-          trigger: "#section-graph-preview",
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 1
-        }
-      });
-      gsap.from(".graph-node-group-3", {
-        y: -15,
-        scrollTrigger: {
-          trigger: "#section-graph-preview",
-          start: "top bottom",
-          end: "bottom top",
-          scrub: 2
-        }
-      });
     });
 
     mm.add("(prefers-reduced-motion: reduce)", () => {
@@ -393,13 +374,13 @@ export default function LandingPage() {
 
   const enter = () => {
     setEntering(true);
-    setTimeout(() => router.push("/graph"), 500);
+    setTimeout(() => router.push(session ? "/graph" : "/login"), 500);
   };
 
 
 
   return (
-    <div ref={wrapRef} className="bg-[#f5f5f5] text-[#0c0a09] relative min-h-screen selection:bg-[#a8c8e8]/40 overflow-x-clip font-sans">
+    <div ref={wrapRef} className="bg-[var(--color-canvas)] text-[var(--color-ink)] relative min-h-screen selection:bg-[#a8c8e8]/40 overflow-x-clip font-sans">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -417,37 +398,67 @@ export default function LandingPage() {
       
       {/* ═══════ TOP FLOATING NAVIGATION ═══════ */}
       <nav className={`fixed top-0 left-0 right-0 z-50 h-16 transition-all duration-300 ${
-        scrolled ? "bg-[#f5f5f5]/90 backdrop-blur-md border-b border-[#e7e5e4] shadow-[0_4px_16px_rgba(0,0,0,0.02)]" : "bg-transparent border-b border-transparent"
+        scrolled ? "bg-[var(--color-canvas)]/90 backdrop-blur-md border-b border-[var(--color-hairline)] shadow-[0_4px_16px_rgba(0,0,0,0.02)]" : "bg-transparent border-b border-transparent"
       }`}>
         <div className="max-w-[1200px] mx-auto px-6 h-full flex items-center justify-between">
-          <a href="#hero" onClick={(e) => handleNavClick(e, "#hero")} className="flex items-center gap-2 cursor-pointer" aria-label="Scroll to top">
+            <a href="#hero" onClick={(e) => handleNavClick(e, "#hero")} className="flex items-center gap-2 cursor-pointer" aria-label="Scroll to top">
             <Image
-              src={logoError ? "/images/synapse-logo.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
+              src={logoError ? "/images/synapse-logo.png" : !mounted ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : theme === "dark" ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
               alt="Synapse Logo"
               width={100}
               height={28}
               priority
               className="object-contain"
+              style={{ width: "auto", height: "auto" }}
               onError={() => setLogoError(true)}
             />
           </a>
 
           {/* Desktop Nav Links */}
           <div className="hidden md:flex items-center gap-8">
-            <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">How it works</a>
-            <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Reconciliation</a>
-            <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Memory Health</a>
-            <a href="#section-insights" onClick={(e) => handleNavClick(e, "#section-insights")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Insights</a>
-            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">GitHub</a>
-            <a href="/settings" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Sign In</a>
-            <button onClick={enter}
-              className="px-5 py-2.5 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-[#0c0a09] transition-all duration-300 cursor-pointer">
-              Open App
+            {session && (
+              <>
+                <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">How it works</a>
+                <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">Reconciliation</a>
+                <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">Memory Health</a>
+                <a href="#section-insights" onClick={(e) => handleNavClick(e, "#section-insights")} className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">Insights</a>
+              </>
+            )}
+            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">GitHub</a>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-1.5 rounded-lg text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-strong)] transition-all duration-200 cursor-pointer"
+              title={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : "Switch theme"}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {mounted && theme === "dark" ? (
+                  <>
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </>
+                ) : mounted && theme !== "dark" ? (
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                ) : null}
+              </svg>
             </button>
+            <a href="/settings" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">Sign In</a>
+            {session && (
+              <button onClick={enter}
+                className="px-5 py-2.5 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[15px] font-medium hover:bg-[var(--color-ink)] transition-all duration-300 cursor-pointer">
+                Open App
+              </button>
+            )}
           </div>
 
           {/* Mobile Menu Hamburger */}
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden flex items-center text-[#292524] focus:outline-none">
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="md:hidden flex items-center text-[var(--color-body-strong)] focus:outline-none">
             <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2">
               {isMobileMenuOpen ? (
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -460,17 +471,46 @@ export default function LandingPage() {
 
         {/* Mobile Menu Panel */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-[#f5f5f5] border-b border-[#e7e5e4] px-6 py-6 space-y-4 flex flex-col items-start animate-fade-in">
-            <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">How it works</a>
-            <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">Reconciliation</a>
-            <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">Memory Health</a>
-            <a href="#section-insights" onClick={(e) => handleNavClick(e, "#section-insights")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">Insights</a>
-            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" onClick={() => setIsMobileMenuOpen(false)} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors w-full py-1">GitHub</a>
-            <a href="/settings" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors w-full py-1">Sign In</a>
-            <button onClick={enter}
-              className="w-full text-center px-5 py-2.5 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-[#0c0a09] transition-all duration-300">
-              Open App
+          <div className="md:hidden bg-[var(--color-canvas)] border-b border-[var(--color-hairline)] px-6 py-6 space-y-4 flex flex-col items-start animate-fade-in">
+            {session && (
+              <>
+                <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="text-[15px] font-medium text-[var(--color-body)] w-full py-1">How it works</a>
+                <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="text-[15px] font-medium text-[var(--color-body)] w-full py-1">Reconciliation</a>
+                <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="text-[15px] font-medium text-[var(--color-body)] w-full py-1">Memory Health</a>
+                <a href="#section-insights" onClick={(e) => handleNavClick(e, "#section-insights")} className="text-[15px] font-medium text-[var(--color-body)] w-full py-1">Insights</a>
+              </>
+            )}
+            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" onClick={() => setIsMobileMenuOpen(false)} className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors w-full py-1">GitHub</a>
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="flex items-center gap-2 text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors w-full py-1 cursor-pointer"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                {mounted && theme === "dark" ? (
+                  <>
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </>
+                ) : mounted && theme !== "dark" ? (
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                ) : null}
+              </svg>
+              <span>{mounted ? (theme === "dark" ? "Light mode" : "Dark mode") : ""}</span>
             </button>
+            <a href="/settings" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors w-full py-1">Sign In</a>
+            {session && (
+              <button onClick={enter}
+                className="w-full text-center px-5 py-2.5 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[15px] font-medium hover:bg-[var(--color-ink)] transition-all duration-300">
+                Open App
+              </button>
+            )}
           </div>
         )}
       </nav>
@@ -480,34 +520,34 @@ export default function LandingPage() {
         <div className="max-w-[1200px] mx-auto px-6 w-full grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
           
           <div className="flex flex-col items-center text-center md:items-start md:text-left md:col-span-7 relative z-10 w-full">
-            <h1 className="fade-up display-mega text-[#0c0a09] mb-8 leading-[1.05] tracking-[-1.92px]" style={{ fontWeight: 300 }}>
+            <h1 className="fade-up display-mega text-[var(--color-ink)] mb-8 leading-[1.05] tracking-[-1.92px]" style={{ fontWeight: 300 }}>
               Memory that knows when it&apos;s wrong.
             </h1>
 
-            <p className="fade-up text-[#4e4e4e] text-sm md:text-base leading-relaxed max-w-xl mb-10 tracking-[0.16px]">
+            <p className="fade-up text-[var(--color-body)] text-sm md:text-base leading-relaxed max-w-xl mb-10 tracking-[0.16px]">
               Ingest scattered notes from ChatGPT, GitHub, PDFs, and more. Synapse actively reconciles conflicting facts, prunes unreinforced paths, and structures your personal knowledge graph.
             </p>
 
             <div className="fade-up flex flex-col sm:flex-row items-center justify-center md:justify-start gap-4 w-full sm:w-auto">
               <button onClick={enter} disabled={entering}
-                className="px-6 py-3 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-[#0c0a09] transition-all duration-300 cursor-pointer disabled:opacity-50 w-full sm:w-auto text-center justify-center flex">
+                className="px-6 py-3 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[15px] font-medium hover:bg-[var(--color-ink)] transition-all duration-300 cursor-pointer disabled:opacity-50 w-full sm:w-auto text-center justify-center flex">
                 {entering ? "Opening…" : "Open the App"}
               </button>
               <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer"
-                className="px-6 py-3 rounded-full border border-[#d6d3d1] text-[15px] font-medium text-[#0c0a09] hover:bg-[#f0efed] transition-all duration-300 cursor-pointer w-full sm:w-auto text-center justify-center flex">
+                className="px-6 py-3 rounded-full border border-[var(--color-hairline-strong)] text-[15px] font-medium text-[var(--color-ink)] hover:bg-[var(--color-surface-strong)] transition-all duration-300 cursor-pointer w-full sm:w-auto text-center justify-center flex">
                 View on GitHub
               </a>
             </div>
           </div>
 
           {/* Editorial Layout Asymmetric Right Column */}
-          <div className="fade-up md:col-span-5 hidden md:flex flex-col items-end text-right border-l border-[#e7e5e4] pl-10 py-8 gap-8 relative z-10 self-center">
-            <SparkleIcon className="w-8 h-8 text-[#292524]/20 mr-2" />
+          <div className="fade-up md:col-span-5 hidden md:flex flex-col items-end text-right border-l border-[var(--color-hairline)] pl-10 py-8 gap-8 relative z-10 self-center">
+            <SparkleIcon className="w-8 h-8 text-[var(--color-primary)]/20 mr-2" />
             <div className="space-y-2">
-              <div className="text-[11px] font-mono tracking-widest text-[#777169] uppercase">STRUCTURED METADATA</div>
-              <div className="font-serif text-2xl text-[#292524] italic leading-tight">reconcile()<br />forget()<br />remember()</div>
+              <div className="text-[11px] font-mono tracking-widest text-[var(--color-muted)] uppercase">STRUCTURED METADATA</div>
+              <div className="font-serif text-2xl text-[var(--color-body-strong)] italic leading-tight">reconcile()<br />forget()<br />remember()</div>
             </div>
-            <div className="text-xs text-[#777169] leading-relaxed max-w-[200px]">
+            <div className="text-xs text-[var(--color-muted)] leading-relaxed max-w-[200px]">
               Built as a real-time memory dashboard on top of Cognee&apos;s semantic engine.
             </div>
           </div>
@@ -516,15 +556,15 @@ export default function LandingPage() {
 
         {/* Animated Scroll Cue */}
         <div className="scroll-cue absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 cursor-default select-none pointer-events-none opacity-60 z-20">
-          <span className="caption-uppercase tracking-[0.15em] text-[10px] text-[#777169]">SCROLL STORY</span>
-          <svg className="w-4 h-4 animate-bounce text-[#777169]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+          <span className="caption-uppercase tracking-[0.15em] text-[10px] text-[var(--color-muted)]">SCROLL STORY</span>
+          <svg className="w-4 h-4 animate-bounce text-[var(--color-muted)]" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
           </svg>
         </div>
       </section>
 
       {/* ═══════ 2.5 · HOW IT WORKS WALKTHROUGH ═══════ */}
-      <section id="how-it-works" className="relative z-10 py-20 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+      <section id="how-it-works" className="relative z-10 py-20 px-6 bg-[var(--color-canvas)] border-t border-[var(--color-hairline)]">
         <div className="max-w-[1200px] mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
@@ -579,21 +619,21 @@ export default function LandingPage() {
             ].map((step) => (
               <div 
                 key={step.num} 
-                className="relative group p-8 rounded-2xl bg-[#fafafa]/80 border border-[#e7e5e4] hover:border-[#0c0a09]/50 hover:bg-white hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:-translate-y-0.5 transition-all duration-500 flex flex-col justify-between"
+                className="relative group p-8 rounded-2xl bg-[var(--color-surface-soft)]/80 border border-[var(--color-hairline)] hover:border-[var(--color-ink)]/50 hover:bg-[var(--color-surface-card)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.03)] hover:-translate-y-0.5 transition-all duration-500 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between mb-8">
-                    <span className="text-[10px] font-mono font-semibold text-[#777169] tracking-widest bg-[#f0efed] px-2.5 py-1 rounded">
+                    <span className="text-[10px] font-mono font-semibold text-[var(--color-muted)] tracking-widest bg-[var(--color-surface-strong)] px-2.5 py-1 rounded">
                       {step.num} / {step.label}
                     </span>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${step.color}`}>
                       {step.icon}
                     </div>
                   </div>
-                  <h3 className="text-base font-serif font-medium text-[#0c0a09] mb-2 leading-tight">
+                  <h3 className="text-base font-serif font-medium text-[var(--color-ink)] mb-2 leading-tight">
                     {step.title}
                   </h3>
-                  <p className="text-xs text-[#777169] leading-relaxed">
+                  <p className="text-xs text-[var(--color-muted)] leading-relaxed">
                     {step.desc}
                   </p>
                 </div>
@@ -604,109 +644,109 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ 3 · THE PROBLEM (Scattered Cards, white BG) ═══════ */}
-      <section id="section-problem" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+      <section id="section-problem" className="relative z-10 py-24 md:py-32 px-6 bg-[var(--color-canvas)] border-t border-[var(--color-hairline)]">
         <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
           <div className="text-left md:col-span-5">
             <SectionLabel text="THE PROBLEM" color="bg-[#a7e5d3]" />
-            <h2 className="display-lg text-[#0c0a09] mb-8 leading-[1.1]" style={{ fontWeight: 300 }}>
+            <h2 className="display-lg text-[var(--color-ink)] mb-8 leading-[1.1]" style={{ fontWeight: 300 }}>
               Your knowledge lives in twelve different places.
             </h2>
-            <p className="text-[#4e4e4e] text-base leading-relaxed max-w-lg mb-8 tracking-[0.16px]">
+            <p className="text-[var(--color-body)] text-base leading-relaxed max-w-lg mb-8 tracking-[0.16px]">
               Decisions are made in ChatGPT. Framework specs are on GitHub. Research is stored in PDFs. Plain vector stores treat them as isolated strings. Synapse brings them together, structuring relationships dynamically.
             </p>
-            <div className="mt-8 pt-8 border-t border-[#e7e5e4] flex gap-12 select-none">
+            <div className="mt-8 pt-8 border-t border-[var(--color-hairline)] flex gap-12 select-none">
               <div>
-                <div className="text-3xl font-mono font-light text-[#292524]">12+</div>
-                <div className="text-[10px] uppercase tracking-wider text-[#777169] font-semibold mt-1">Disjointed Tools</div>
+                <div className="text-3xl font-mono font-light text-[var(--color-body-strong)]">12+</div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--color-muted)] font-semibold mt-1">Disjointed Tools</div>
               </div>
               <div>
                 <div className="text-3xl font-mono font-light text-[#ca8a04]">0</div>
-                <div className="text-[10px] uppercase tracking-wider text-[#777169] font-semibold mt-1">Shared Context</div>
+                <div className="text-[10px] uppercase tracking-wider text-[var(--color-muted)] font-semibold mt-1">Shared Context</div>
               </div>
             </div>
           </div>
 
           {/* Scattered Source-Cards Mockup Frame */}
-          <div className="md:col-span-7 relative h-[300px] sm:h-[360px] md:h-[420px] w-full flex items-center justify-center bg-white/30 rounded-3xl border border-[#e7e5e4]/50 overflow-hidden select-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.01)]">
+          <div className="md:col-span-7 relative h-[300px] sm:h-[360px] md:h-[420px] w-full flex items-center justify-center bg-[var(--color-surface-card)]/30 rounded-3xl border border-[var(--color-hairline)]/50 overflow-hidden select-none shadow-[inset_0_2px_8px_rgba(0,0,0,0.01)]">
             <div className="absolute inset-0 bg-[radial-gradient(#8080800a_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
             
             {/* Card 1: ChatGPT */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[5%] left-[4%] md:top-[10%] md:left-[8%] rotate-[-4deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
+            <div className="source-card bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[5%] left-[4%] md:top-[10%] md:left-[8%] rotate-[-4deg] hover:border-[var(--color-hairline-strong)] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-body-strong)] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <path d="M12 2v20M17 5H7M19 12H5M17 19H7M21 9l-18 6M3 9l18 6" />
-                <circle cx="12" cy="12" r="3" className="fill-[#f5f5f5]" />
+                <circle cx="12" cy="12" r="3" className="fill-[var(--color-canvas)]" />
               </svg>
-              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">ChatGPT Export</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[var(--color-body-strong)] tracking-[0.16px]">ChatGPT Export</span>
             </div>
 
             {/* Card 2: GitHub */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[38%] left-[2%] md:top-[48%] md:left-[4%] rotate-[3deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
+            <div className="source-card bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[38%] left-[2%] md:top-[48%] md:left-[4%] rotate-[3deg] hover:border-[var(--color-hairline-strong)] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-body-strong)] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
               </svg>
-              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">GitHub Commit</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[var(--color-body-strong)] tracking-[0.16px]">GitHub Commit</span>
             </div>
 
             {/* Card 3: Notion */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[70%] left-[6%] md:top-[78%] md:left-[12%] rotate-[-5deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
+            <div className="source-card bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[70%] left-[6%] md:top-[78%] md:left-[12%] rotate-[-5deg] hover:border-[var(--color-hairline-strong)] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-body-strong)] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <path d="M12 2L2 7l10 5 10-5-10-5Z" />
                 <path d="M2 17l10 5 10-5" />
               </svg>
-              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">Notion Notes</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[var(--color-body-strong)] tracking-[0.16px]">Notion Notes</span>
             </div>
 
             {/* Card 4: Claude */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[18%] right-[4%] md:top-[22%] md:right-[10%] rotate-[6deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <SparkleIcon className="w-3.5 h-3.5 md:w-[18px] md:h-[18px] text-[#292524]" />
-              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">Claude Session</span>
+            <div className="source-card bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[18%] right-[4%] md:top-[22%] md:right-[10%] rotate-[6deg] hover:border-[var(--color-hairline-strong)] transition-colors duration-150">
+              <SparkleIcon className="w-3.5 h-3.5 md:w-[18px] md:h-[18px] text-[var(--color-body-strong)]" />
+              <span className="text-[10px] md:text-xs font-semibold text-[var(--color-body-strong)] tracking-[0.16px]">Claude Session</span>
             </div>
 
             {/* Card 5: PDFs */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[48%] right-[18%] md:top-[52%] md:right-[22%] rotate-[-2deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
+            <div className="source-card bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[48%] right-[18%] md:top-[52%] md:right-[22%] rotate-[-2deg] hover:border-[var(--color-hairline-strong)] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-body-strong)] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
               </svg>
-              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">specs.pdf</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[var(--color-body-strong)] tracking-[0.16px]">specs.pdf</span>
             </div>
 
             {/* Card 6: Articles */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[72%] right-[4%] md:top-[76%] md:right-[8%] rotate-[3deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
+            <div className="source-card bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[72%] right-[4%] md:top-[76%] md:right-[8%] rotate-[3deg] hover:border-[var(--color-hairline-strong)] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-body-strong)] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                 <path d="M16 8h2M16 12h2" />
               </svg>
-              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">Web Article</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[var(--color-body-strong)] tracking-[0.16px]">Web Article</span>
             </div>
 
             {/* Card 7: YouTube */}
-            <div className="source-card bg-white border border-[#e7e5e4] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[30%] left-[32%] md:top-[36%] md:left-[40%] rotate-[-1deg] hover:border-[#d6d3d1] transition-colors duration-150">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#292524] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
+            <div className="source-card bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-full px-3 py-2 md:px-5 md:py-3 shadow-[0_4px_16px_rgba(0,0,0,0.03)] flex items-center gap-1.5 md:gap-3 absolute top-[30%] left-[32%] md:top-[36%] md:left-[40%] rotate-[-1deg] hover:border-[var(--color-hairline-strong)] transition-colors duration-150">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-body-strong)] w-3.5 h-3.5 md:w-[18px] md:h-[18px]">
                 <rect x="2" y="3" width="20" height="18" rx="5" ry="5" />
                 <polygon points="10 8 16 12 10 16 10 8" />
               </svg>
-              <span className="text-[10px] md:text-xs font-semibold text-[#292524] tracking-[0.16px]">YouTube Audio</span>
+              <span className="text-[10px] md:text-xs font-semibold text-[var(--color-body-strong)] tracking-[0.16px]">YouTube Audio</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* ═══════ 4 · INGESTION AND STAGES PIPELINE (Pinned, Ingestion Spiral) ═══════ */}
-      <section id="section-ingest" className="relative z-10 w-full min-h-fit md:min-h-screen bg-[#f5f5f5] flex items-center border-t border-[#e7e5e4]">
+      <section id="section-ingest" className="relative z-10 w-full min-h-fit md:min-h-screen bg-[var(--color-canvas)] flex items-center border-t border-[var(--color-hairline)]">
         <div className="max-w-[1200px] mx-auto px-6 w-full py-24 grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
           
           {/* Stepper info list */}
           <div className="text-left md:col-span-6 flex flex-col gap-6">
             <div>
               <SectionLabel text="THE PIPELINE" color="bg-[#c8b8e0]" />
-              <h2 className="display-lg text-[#0c0a09] mb-8 leading-[1.08]" style={{ fontWeight: 300 }}>
+              <h2 className="display-lg text-[var(--color-ink)] mb-8 leading-[1.08]" style={{ fontWeight: 300 }}>
                 Feed it anything. Structure is automatic.
               </h2>
             </div>
 
             {/* Vertical pipeline progress UI */}
-            <div className="relative flex flex-col gap-8 pl-8 border-l border-[#e7e5e4]">
+            <div className="relative flex flex-col gap-8 pl-8 border-l border-[var(--color-hairline)]">
               {[
                 { step: 1, title: "Fetch", desc: "Ingests Raw context: PDFs, repository code, exports, or YouTube transcripts." },
                 { step: 2, title: "Extract", desc: "AI parsing identifies central semantic nodes, parameters, and entities." },
@@ -714,12 +754,12 @@ export default function LandingPage() {
                 { step: 4, title: "improve()", desc: "Synapse contradiction sweeps detect factual conflicts for human judgment." }
               ].map((s) => (
                 <div key={s.title} className="relative flex flex-col items-start">
-                  <div className={`pipeline-step-${s.step} absolute left-[-45px] top-0 w-8 h-8 rounded-full border border-[#d6d3d1] bg-white grid place-items-center text-xs font-semibold font-mono text-[#777169] transition-all duration-300`}>
+                  <div className={`pipeline-step-${s.step} absolute left-[-45px] top-0 w-8 h-8 rounded-full border border-[var(--color-hairline-strong)] bg-[var(--color-surface-card)] grid place-items-center text-xs font-semibold font-mono text-[var(--color-muted)] transition-all duration-300`}>
                     {s.step}
                   </div>
                   <div>
-                    <h4 className={`pipeline-label-${s.step} text-base font-semibold text-[#777169] opacity-70 transition-all duration-300`}>{s.title}</h4>
-                    <p className={`pipeline-desc-${s.step} text-sm text-[#777169] mt-1.5 leading-relaxed opacity-60 transition-all duration-300`}>{s.desc}</p>
+                    <h4 className={`pipeline-label-${s.step} text-base font-semibold text-[var(--color-muted)] opacity-70 transition-all duration-300`}>{s.title}</h4>
+                    <p className={`pipeline-desc-${s.step} text-sm text-[var(--color-muted)] mt-1.5 leading-relaxed opacity-60 transition-all duration-300`}>{s.desc}</p>
                   </div>
                 </div>
               ))}
@@ -766,65 +806,65 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ 5 · WHAT CHANGED RECONCILIATION (Pinned droplets, conflict cards) ═══════ */}
-      <section id="section-resolve" className="relative z-10 w-full min-h-fit md:min-h-screen bg-[#f5f5f5] flex items-center border-t border-[#e7e5e4]">
+      <section id="section-resolve" className="relative z-10 w-full min-h-fit md:min-h-screen bg-[var(--color-canvas)] flex items-center border-t border-[var(--color-hairline)]">
         <div className="max-w-[1200px] mx-auto px-6 w-full py-24 grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
           
           {/* Left Column: text details and interactive Compare + Diff card mockups */}
           <div className="text-left md:col-span-6 flex flex-col gap-8">
             <div>
               <SectionLabel text="RECONCILIATION" color="bg-[#f4c5a8]" />
-              <h2 className="display-lg text-[#0c0a09] mb-8 leading-[1.08]" style={{ fontWeight: 300 }}>
+              <h2 className="display-lg text-[var(--color-ink)] mb-8 leading-[1.08]" style={{ fontWeight: 300 }}>
                 Conflicts resolved by design.
               </h2>
-              <p className="text-[#4e4e4e] text-base leading-relaxed tracking-[0.16px]">
+              <p className="text-[var(--color-body)] text-base leading-relaxed tracking-[0.16px]">
                 When new evidence contradicts an older belief, Synapse detects the contradiction at the schema layer and surfaces it immediately. You retain ultimate control over what enters your long-term memory graph.
               </p>
             </div>
 
             <div className="space-y-6">
               {/* Compare UI Card Mockup */}
-              <div id="compare-ui-card" className="bg-white border border-[#e7e5e4] p-5 sm:p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex flex-col opacity-0">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#e7e5e4] pb-4 mb-4">
+              <div id="compare-ui-card" className="bg-[var(--color-surface-card)] border border-[var(--color-hairline)] p-5 sm:p-6 rounded-2xl shadow-[0_4px_16px_rgba(0,0,0,0.02)] flex flex-col opacity-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-4 mb-4">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-[#e0a328]" />
-                    <span className="text-xs font-semibold text-[#0c0a09] tracking-wider uppercase">Resolve Contradiction</span>
+                    <span className="text-xs font-semibold text-[var(--color-ink)] tracking-wider uppercase">Resolve Contradiction</span>
                   </div>
-                  <span className="text-[10px] text-[#777169] font-mono">Topic: Backend Security</span>
+                  <span className="text-[10px] text-[var(--color-muted)] font-mono">Topic: Backend Security</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                  <div className="bg-canvas-soft border border-[#e7e5e4] p-4 rounded-xl text-left">
-                    <span className="text-[9px] uppercase tracking-wider text-[#777169] font-semibold block mb-1">Old belief</span>
-                    <p className="text-xs text-[#292524] font-medium leading-relaxed">&quot;Authentication: basic client-side session checker.&quot;</p>
-                    <span className="text-[9px] text-[#a8a29e] block mt-3">auth_config.md</span>
+                  <div className="bg-canvas-soft border border-[var(--color-hairline)] p-4 rounded-xl text-left">
+                    <span className="text-[9px] uppercase tracking-wider text-[var(--color-muted)] font-semibold block mb-1">Old belief</span>
+                    <p className="text-xs text-[var(--color-body-strong)] font-medium leading-relaxed">&quot;Authentication: basic client-side session checker.&quot;</p>
+                    <span className="text-[9px] text-[var(--color-muted-soft)] block mt-3">auth_config.md</span>
                   </div>
-                  <div className="bg-canvas-soft border border-[#e7e5e4] p-4 rounded-xl text-left">
-                    <span className="text-[9px] uppercase tracking-wider text-[#292524] font-semibold block mb-1">New evidence</span>
-                    <p className="text-xs text-[#292524] font-medium leading-relaxed">&quot;Authentication: Tier 1 shared-secret server proxy gate.&quot;</p>
-                    <span className="text-[9px] text-[#a8a29e] block mt-3">AGENTS.md</span>
+                  <div className="bg-canvas-soft border border-[var(--color-hairline)] p-4 rounded-xl text-left">
+                    <span className="text-[9px] uppercase tracking-wider text-[var(--color-body-strong)] font-semibold block mb-1">New evidence</span>
+                    <p className="text-xs text-[var(--color-body-strong)] font-medium leading-relaxed">&quot;Authentication: Tier 1 shared-secret server proxy gate.&quot;</p>
+                    <span className="text-[9px] text-[var(--color-muted-soft)] block mt-3">AGENTS.md</span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3 justify-end">
-                  <button className="px-4 py-2 border border-[#d6d3d1] text-xs font-medium rounded-full text-[#4e4e4e] bg-white hover:text-black transition-colors select-none">
+                  <button className="px-4 py-2 border border-[var(--color-hairline-strong)] text-xs font-medium rounded-full text-[var(--color-body)] bg-[var(--color-surface-card)] hover:text-black transition-colors select-none">
                     Keep Old
                   </button>
-                  <button id="btn-keep-new" className="px-5 py-2 bg-[#292524] text-white text-xs font-medium rounded-full hover:bg-black transition-colors select-none">
+                  <button id="btn-keep-new" className="px-5 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] text-xs font-medium rounded-full hover:bg-black transition-colors select-none">
                     Keep New
                   </button>
                 </div>
               </div>
 
               {/* Diff Card Mockup */}
-              <div id="diff-card" className="bg-white border border-[#e7e5e4] p-5 rounded-xl text-left font-mono text-[10px] space-y-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.01)] opacity-0">
-                <div className="flex justify-between border-b border-[#e7e5e4] pb-2 mb-2 font-sans">
-                  <span className="uppercase text-[8px] text-[#777169] font-bold">Diff Result — Backend Security</span>
+              <div id="diff-card" className="bg-[var(--color-surface-card)] border border-[var(--color-hairline)] p-5 rounded-xl text-left font-mono text-[10px] space-y-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.01)] opacity-0">
+                <div className="flex justify-between border-b border-[var(--color-hairline)] pb-2 mb-2 font-sans">
+                  <span className="uppercase text-[8px] text-[var(--color-muted)] font-bold">Diff Result — Backend Security</span>
                   <span className="text-[8px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full font-semibold">Committed</span>
                 </div>
-                <div className="text-[#dc2626] font-medium">− Client-side route blocking</div>
+                <div className="text-[var(--color-semantic-danger)] font-medium">− Client-side route blocking</div>
                 <div className="text-emerald-600 font-medium">+ Server-side proxy middleware.ts</div>
                 <div className="text-emerald-600 font-medium">+ SYNAPSE_ACCESS_KEY validation</div>
-                <div className="text-[#777169] font-sans text-[9px] pt-1">
+                <div className="text-[var(--color-muted)] font-sans text-[9px] pt-1">
                   Reconciliation pass updated active nodes successfully.
                 </div>
               </div>
@@ -875,7 +915,7 @@ export default function LandingPage() {
             </svg>
 
             {/* Droplet Captions */}
-            <div className="absolute top-[52%] flex justify-between w-[80%] font-mono text-[10px] text-[#777169] select-none pointer-events-none">
+            <div className="absolute top-[52%] flex justify-between w-[80%] font-mono text-[10px] text-[var(--color-muted)] select-none pointer-events-none">
               <span id="droplet-gold-label" className="opacity-0">Old Belief (Gold)</span>
               <span id="droplet-smoke-label" className="opacity-0">New Evidence (Smoke)</span>
             </div>
@@ -897,18 +937,18 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ 6 · MEMORY HEALTH / DECAY (Eclipse and dissolving bubbles) ═══════ */}
-      <section id="section-decay" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+      <section id="section-decay" className="relative z-10 py-24 md:py-32 px-6 bg-[var(--color-canvas)] border-t border-[var(--color-hairline)]">
         <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
           
           {/* Left Column: Copy + Confidence decay timeline progress */}
           <div className="text-left md:col-span-6 flex flex-col gap-10">
             <div>
               <SectionLabel text="MEMORY HEALTH" color="bg-[#a8c8e8]" />
-              <h2 className="display-lg text-[#0c0a09] mb-8 leading-[1.08]" style={{ fontWeight: 300 }}>
+              <h2 className="display-lg text-[var(--color-ink)] mb-8 leading-[1.08]" style={{ fontWeight: 300 }}>
                 Unreinforced beliefs fade.
               </h2>
-              <p className="text-[#4e4e4e] text-base leading-relaxed tracking-[0.16px] max-w-lg">
-                Confidence degrades proportionally over time. When a belief goes unreinforced, Synapse prunes it from the graph via <code className="text-xs bg-[#f0efed] px-1 py-0.5 rounded font-mono font-bold">cognee.forget()</code>.
+              <p className="text-[var(--color-body)] text-base leading-relaxed tracking-[0.16px] max-w-lg">
+                Confidence degrades proportionally over time. When a belief goes unreinforced, Synapse prunes it from the graph via <code className="text-xs bg-[var(--color-surface-strong)] px-1 py-0.5 rounded font-mono font-bold">cognee.forget()</code>.
               </p>
             </div>
 
@@ -916,28 +956,28 @@ export default function LandingPage() {
             <div className="space-y-8 max-w-md">
               <div>
                 <div className="flex justify-between text-xs font-medium mb-3">
-                  <span className="text-[#777169]">Backend Security · 3 months ago</span>
-                  <span className="font-mono font-semibold text-[#dc2626]" id="decay-score-postgres">0.92</span>
+                  <span className="text-[var(--color-muted)]">Backend Security · 3 months ago</span>
+                  <span className="font-mono font-semibold text-[var(--color-semantic-danger)]" id="decay-score-postgres">0.92</span>
                 </div>
-                <div className="h-2 bg-[#e7e5e4] rounded-full overflow-hidden">
-                  <div id="decay-bar-postgres" className="h-full bg-[#d6d3d1] rounded-full w-[92%]" />
+                <div className="h-2 bg-[var(--color-hairline)] rounded-full overflow-hidden">
+                  <div id="decay-bar-postgres" className="h-full bg-[var(--color-hairline-strong)] rounded-full w-[92%]" />
                 </div>
               </div>
               
               <div>
                 <div className="flex justify-between text-xs font-medium mb-3">
-                  <span className="text-[#0c0a09] font-semibold">Canvas Theme · reinforced today</span>
-                  <span className="font-mono font-semibold text-[#0c0a09]" id="decay-score-supabase">0.00</span>
+                  <span className="text-[var(--color-ink)] font-semibold">Canvas Theme · reinforced today</span>
+                  <span className="font-mono font-semibold text-[var(--color-ink)]" id="decay-score-supabase">0.00</span>
                 </div>
-                <div className="h-2 bg-[#e7e5e4] rounded-full overflow-hidden">
-                  <div id="decay-bar-supabase" className="h-full bg-[#292524] rounded-full w-[0%]" />
+                <div className="h-2 bg-[var(--color-hairline)] rounded-full overflow-hidden">
+                  <div id="decay-bar-supabase" className="h-full bg-[var(--color-primary)] rounded-full w-[0%]" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* Right Column: Memory Decay Illustration */}
-          <div className="md:col-span-6 flex justify-center items-center relative h-[260px] sm:h-[320px] md:h-[380px] bg-white border border-[#e7e5e4] rounded-3xl overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.02)] select-none">
+          <div className="md:col-span-6 flex justify-center items-center relative h-[260px] sm:h-[320px] md:h-[380px] bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-3xl overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.02)] select-none">
             <Image
               src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/memory-decay.webp"
               alt="Memory Decay Illustration"
@@ -951,25 +991,25 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ 7 · METADATA GRAPH PREVIEW (Parallax SVG Graph) ═══════ */}
-      <section id="section-graph-preview" className="relative z-10 py-16 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+      <section id="section-graph-preview" className="relative z-10 py-16 md:py-32 px-6 bg-[var(--color-canvas)] border-t border-[var(--color-hairline)]">
         <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-16 items-center">
           
           <div className="text-left md:col-span-5 flex flex-col gap-6">
             <SectionLabel text="METADATA GRAPH" color="bg-[#e8b8c4]" />
-            <h2 className="display-lg text-[#0c0a09] leading-[1.08]" style={{ fontWeight: 300 }}>
+            <h2 className="display-lg text-[var(--color-ink)] leading-[1.08]" style={{ fontWeight: 300 }}>
               Every memory, mapped.
             </h2>
-            <p className="text-[#4e4e4e] text-base leading-relaxed tracking-[0.16px]">
+            <p className="text-[var(--color-body)] text-base leading-relaxed tracking-[0.16px]">
               Synapse builds a weighted semantic relationship connection network. Node sizing dynamically adjusts (larger nodes have more connections). Open the app to explore the full interactive 3D graph.
             </p>
-            <div className="pt-2 text-xs font-mono text-[#777169] select-none">
+            <div className="pt-2 text-xs font-mono text-[var(--color-muted)] select-none">
               [ Glance Preview — Static Layer Mockup ]
             </div>
           </div>
 
           {/* Real Screenshot */}
           <div className="md:col-span-7 flex flex-col items-center gap-6 relative w-full">
-            <div className="relative z-10 w-full overflow-hidden rounded-2xl border border-[#e7e5e4] shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+            <div className="relative z-10 w-full overflow-hidden rounded-2xl border border-[var(--color-hairline)] shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
               <Image
                 src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/graph_screenshot.jpg"
                 alt="Synapse Metadata Graph Screen"
@@ -980,7 +1020,7 @@ export default function LandingPage() {
               />
             </div>
             
-            <div className="absolute -top-3 right-3 md:-top-4 md:-right-4 bg-white border border-[#e7e5e4] px-3 py-1 rounded-full text-[10px] font-mono shadow-sm z-20 select-none">
+            <div className="absolute -top-3 right-3 md:-top-4 md:-right-4 bg-[var(--color-surface-card)] border border-[var(--color-hairline)] px-3 py-1 rounded-full text-[10px] font-mono shadow-sm z-20 select-none">
               Interactive 3D Layer
             </div>
           </div>
@@ -988,17 +1028,17 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ 7.5 · INSIGHTS & GUIDANCE (Provenance, Schema, Session, Filtering) ═══════ */}
-      <section id="section-insights" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+      <section id="section-insights" className="relative z-10 py-24 md:py-32 px-6 bg-[var(--color-canvas)] border-t border-[var(--color-hairline)]">
         <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
 
           {/* Left Column: Text + feature cards */}
           <div className="text-left md:col-span-6 flex flex-col gap-8">
             <div>
               <SectionLabel text="INSIGHTS & GUIDANCE" color="bg-[#a8e0c8]" />
-              <h2 className="display-lg text-[#0c0a09] mb-8 leading-[1.08]" style={{ fontWeight: 300 }}>
+              <h2 className="display-lg text-[var(--color-ink)] mb-8 leading-[1.08]" style={{ fontWeight: 300 }}>
                 See what your memory knows.
               </h2>
-              <p className="text-[#4e4e4e] text-base leading-relaxed tracking-[0.16px]">
+              <p className="text-[var(--color-body)] text-base leading-relaxed tracking-[0.16px]">
                 New tools that expose the inner structure of your graph: provenance traces, schema inventory, session distillation, and entity-level filtering.
               </p>
             </div>
@@ -1010,11 +1050,11 @@ export default function LandingPage() {
                 { title: "Session Distillation", desc: "Compress active-session context into structured guidance. No more re-explaining." },
                 { title: "Graph Type Filtering", desc: "Filter the 3D graph by entity type to focus on specific knowledge domains." }
               ].map((item) => (
-                <div key={item.title} className="bg-white border border-[#e7e5e4] p-5 rounded-xl flex items-start gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
+                <div key={item.title} className="bg-[var(--color-surface-card)] border border-[var(--color-hairline)] p-5 rounded-xl flex items-start gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
                   <div className="w-2 h-2 rounded-full bg-[#a8e0c8] mt-1.5 shrink-0" />
                   <div>
-                    <h4 className="text-sm font-semibold text-[#0c0a09]">{item.title}</h4>
-                    <p className="text-xs text-[#777169] mt-1 leading-relaxed">{item.desc}</p>
+                    <h4 className="text-sm font-semibold text-[var(--color-ink)]">{item.title}</h4>
+                    <p className="text-xs text-[var(--color-muted)] mt-1 leading-relaxed">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -1024,43 +1064,43 @@ export default function LandingPage() {
           {/* Right Column: Settings screenshot */}
           <div className="md:col-span-6 flex justify-center items-center">
             <BrowserChrome url="localhost:3000/settings">
-              <div className="p-6 bg-white font-sans select-none pointer-events-none">
-                <div className="text-[10px] uppercase tracking-wider text-[#777169] font-semibold mb-4 border-b border-[#e7e5e4] pb-3">
+              <div className="p-6 bg-[var(--color-surface-card)] font-sans select-none pointer-events-none">
+                <div className="text-[10px] uppercase tracking-wider text-[var(--color-muted)] font-semibold mb-4 border-b border-[var(--color-hairline)] pb-3">
                   Memory Insights
                 </div>
                 <div className="grid grid-cols-1 gap-4">
-                  <div className="border border-[#e7e5e4] rounded-xl p-4 flex items-center justify-between">
+                  <div className="border border-[var(--color-hairline)] rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-[#a8e0c8]/30 grid place-items-center text-[10px] font-bold text-[#292524]">P</div>
+                      <div className="w-6 h-6 rounded-full bg-[#a8e0c8]/30 grid place-items-center text-[10px] font-bold text-[var(--color-body-strong)]">P</div>
                       <div>
-                        <div className="text-[11px] font-medium text-[#0c0a09]">Provenance</div>
-                        <div className="text-[9px] text-[#777169]">View trace path</div>
+                        <div className="text-[11px] font-medium text-[var(--color-ink)]">Provenance</div>
+                        <div className="text-[9px] text-[var(--color-muted)]">View trace path</div>
                       </div>
                     </div>
-                    <div className="text-[8px] text-white bg-[#292524] px-2.5 py-1 rounded-full font-medium">View &#8594;</div>
+                    <div className="text-[8px] text-[var(--color-on-primary)] bg-[var(--color-primary)] px-2.5 py-1 rounded-full font-medium">View &#8594;</div>
                   </div>
-                  <div className="border border-[#e7e5e4] rounded-xl p-4 flex items-center justify-between">
+                  <div className="border border-[var(--color-hairline)] rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-[#c8b8e0]/30 grid place-items-center text-[10px] font-bold text-[#292524]">S</div>
+                      <div className="w-6 h-6 rounded-full bg-[#c8b8e0]/30 grid place-items-center text-[10px] font-bold text-[var(--color-body-strong)]">S</div>
                       <div>
-                        <div className="text-[11px] font-medium text-[#0c0a09]">Schema Inventory</div>
-                        <div className="text-[9px] text-[#777169]">8 entity types</div>
+                        <div className="text-[11px] font-medium text-[var(--color-ink)]">Schema Inventory</div>
+                        <div className="text-[9px] text-[var(--color-muted)]">8 entity types</div>
                       </div>
                     </div>
-                    <div className="text-[8px] text-white bg-[#292524] px-2.5 py-1 rounded-full font-medium">Load &#8594;</div>
+                    <div className="text-[8px] text-[var(--color-on-primary)] bg-[var(--color-primary)] px-2.5 py-1 rounded-full font-medium">Load &#8594;</div>
                   </div>
-                  <div className="border border-[#e7e5e4] rounded-xl p-4 flex items-center justify-between">
+                  <div className="border border-[var(--color-hairline)] rounded-xl p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 rounded-full bg-[#f4c5a8]/30 grid place-items-center text-[10px] font-bold text-[#292524]">D</div>
+                      <div className="w-6 h-6 rounded-full bg-[#f4c5a8]/30 grid place-items-center text-[10px] font-bold text-[var(--color-body-strong)]">D</div>
                       <div>
-                        <div className="text-[11px] font-medium text-[#0c0a09]">Session Guidance</div>
-                        <div className="text-[9px] text-[#777169]">Distill context</div>
+                        <div className="text-[11px] font-medium text-[var(--color-ink)]">Session Guidance</div>
+                        <div className="text-[9px] text-[var(--color-muted)]">Distill context</div>
                       </div>
                     </div>
-                    <div className="text-[8px] text-white bg-[#292524] px-2.5 py-1 rounded-full font-medium">Distill &#8594;</div>
+                    <div className="text-[8px] text-[var(--color-on-primary)] bg-[var(--color-primary)] px-2.5 py-1 rounded-full font-medium">Distill &#8594;</div>
                   </div>
                 </div>
-                <div className="mt-3 text-[8px] text-[#a8a29e] text-center border-t border-[#e7e5e4] pt-3">
+                <div className="mt-3 text-[8px] text-[var(--color-muted-soft)] text-center border-t border-[var(--color-hairline)] pt-3">
                   Settings Dashboard — Memory Insights panel
                 </div>
               </div>
@@ -1070,14 +1110,14 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ 7.6 · CAPABILITIES (Bento Grid) ═══════ */}
-      <section id="section-capabilities" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+      <section id="section-capabilities" className="relative z-10 py-24 md:py-32 px-6 bg-[var(--color-canvas)] border-t border-[var(--color-hairline)]">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
             <SectionLabel text="CAPABILITIES" color="bg-[#c8b8e0]" />
-            <h2 className="display-lg text-[#0c0a09] leading-[1.08] mb-4" style={{ fontWeight: 300 }}>
+            <h2 className="display-lg text-[var(--color-ink)] leading-[1.08] mb-4" style={{ fontWeight: 300 }}>
               Built on Cognee&apos;s memory lifecycle.
             </h2>
-            <p className="text-[#4e4e4e] text-base leading-relaxed max-w-xl mx-auto tracking-[0.16px]">
+            <p className="text-[var(--color-body)] text-base leading-relaxed max-w-xl mx-auto tracking-[0.16px]">
               Engineered with advanced database structures and LLM layers to automate personal context curation.
             </p>
           </div>
@@ -1085,7 +1125,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card 1: 5 source types (bg-image: capabilities-sphere.webp) */}
             <div 
-              className="p-8 rounded-3xl border border-[#e7e5e4]/50 flex flex-col justify-end min-h-[300px] md:col-span-2 relative overflow-hidden group shadow-[0_4px_16px_rgba(0,0,0,0.02)]"
+              className="p-8 rounded-3xl border border-[var(--color-hairline)]/50 flex flex-col justify-end min-h-[300px] md:col-span-2 relative overflow-hidden group shadow-[0_4px_16px_rgba(0,0,0,0.02)]"
               style={{ 
                 backgroundImage: "url('https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/capabilities-sphere.webp')",
                 backgroundSize: "cover",
@@ -1093,10 +1133,10 @@ export default function LandingPage() {
               }}
             >
               {/* Dark overlay for contrast */}
-              <div className="absolute inset-0 bg-[#0c0a09]/45 group-hover:bg-[#0c0a09]/50 transition-colors duration-300 z-0" />
+              <div className="absolute inset-0 bg-[var(--color-ink)]/45 group-hover:bg-[var(--color-ink)]/50 transition-colors duration-300 z-0" />
               
-              <div className="relative z-10 text-white">
-                <div className="mb-4 text-white/90">
+              <div className="relative z-10 text-[var(--color-on-primary)]">
+                <div className="mb-4 text-[var(--color-on-primary)]/90">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                     <rect x="3" y="3" width="7" height="7" rx="1.5"/>
                     <rect x="14" y="3" width="7" height="7" rx="1.5"/>
@@ -1105,29 +1145,29 @@ export default function LandingPage() {
                   </svg>
                 </div>
                 <h3 className="text-xl font-medium mb-2 font-serif">5 Source Types</h3>
-                <p className="text-sm text-white/80 leading-relaxed max-w-md">
+                <p className="text-sm text-[var(--color-on-primary)]/80 leading-relaxed max-w-md">
                   Ingests PDFs, GitHub repositories, ChatGPT conversational exports, YouTube transcripts, and web articles natively.
                 </p>
-                <div className="flex gap-4 mt-4 bg-white/10 p-3 rounded-xl max-w-sm border border-white/5 backdrop-blur-sm w-fit select-none">
+                <div className="flex gap-4 mt-4 bg-[var(--color-surface-card)]/10 p-3 rounded-xl max-w-sm border border-white/5 backdrop-blur-sm w-fit select-none">
                   {/* ChatGPT Icon */}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-on-primary)]">
                     <path d="M12 2v20M17 5H7M19 12H5M17 19H7M21 9l-18 6M3 9l18 6" />
                   </svg>
                   {/* GitHub Icon */}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-on-primary)]">
                     <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
                   </svg>
                   {/* PDF Icon */}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-on-primary)]">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <polyline points="14 2 14 8 20 8" />
                   </svg>
                   {/* Article Icon */}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-on-primary)]">
                     <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                   </svg>
                   {/* YouTube Icon */}
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-on-primary)]">
                     <rect x="2" y="3" width="20" height="18" rx="5" ry="5" />
                     <polygon points="10 8 16 12 10 16 10 8" />
                   </svg>
@@ -1136,8 +1176,8 @@ export default function LandingPage() {
             </div>
 
             {/* Card 2: Reconciliation engine */}
-            <div className="p-8 rounded-3xl bg-[#f5f3f1] border border-[#e7e5e4]/50 flex flex-col justify-between min-h-[300px] shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
-              <div className="text-[#292524]">
+            <div className="p-8 rounded-3xl bg-[var(--color-surface-subtle)] border border-[var(--color-hairline)]/50 flex flex-col justify-between min-h-[300px] shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
+              <div className="text-[var(--color-body-strong)]">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M16 3l5 5-5 5"/>
                   <path d="M21 8H9"/>
@@ -1146,32 +1186,32 @@ export default function LandingPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-[#0c0a09] mb-2 font-serif">Reconciliation Engine</h3>
-                <p className="text-sm text-[#4e4e4e] leading-relaxed">
+                <h3 className="text-lg font-medium text-[var(--color-ink)] mb-2 font-serif">Reconciliation Engine</h3>
+                <p className="text-sm text-[var(--color-body)] leading-relaxed">
                   Automatic schema-level contradiction detection with interactive conflict-resolution interface.
                 </p>
               </div>
             </div>
 
             {/* Card 3: Time-aware decay */}
-            <div className="p-8 rounded-3xl bg-[#f5f3f1] border border-[#e7e5e4]/50 flex flex-col justify-between min-h-[300px] shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
-              <div className="text-[#292524]">
+            <div className="p-8 rounded-3xl bg-[var(--color-surface-subtle)] border border-[var(--color-hairline)]/50 flex flex-col justify-between min-h-[300px] shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
+              <div className="text-[var(--color-body-strong)]">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="12" cy="12" r="9"/>
                   <path d="M12 7v5l3 3"/>
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-[#0c0a09] mb-2 font-serif">Time-Aware Decay</h3>
-                <p className="text-sm text-[#4e4e4e] leading-relaxed">
+                <h3 className="text-lg font-medium text-[var(--color-ink)] mb-2 font-serif">Time-Aware Decay</h3>
+                <p className="text-sm text-[var(--color-body)] leading-relaxed">
                   Confidence scores degrade proportionally as time passes. Stale beliefs are automatically pruned via Cognee&apos;s forget API.
                 </p>
               </div>
             </div>
 
             {/* Card 4: 3D knowledge graph */}
-            <div className="p-8 rounded-3xl bg-[#f5f3f1] border border-[#e7e5e4]/50 flex flex-col justify-between min-h-[300px] md:col-span-2 shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
-              <div className="text-[#292524]">
+            <div className="p-8 rounded-3xl bg-[var(--color-surface-subtle)] border border-[var(--color-hairline)]/50 flex flex-col justify-between min-h-[300px] md:col-span-2 shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
+              <div className="text-[var(--color-body-strong)]">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <circle cx="12" cy="5" r="3"/>
                   <circle cx="5" cy="19" r="3"/>
@@ -1182,16 +1222,16 @@ export default function LandingPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-[#0c0a09] mb-2 font-serif">3D Knowledge Graph</h3>
-                <p className="text-sm text-[#4e4e4e] leading-relaxed max-w-lg">
+                <h3 className="text-lg font-medium text-[var(--color-ink)] mb-2 font-serif">3D Knowledge Graph</h3>
+                <p className="text-sm text-[var(--color-body)] leading-relaxed max-w-lg">
                   Explore connections through an interactive force-directed WebGL visualizer. Click nodes to trace exact source lineages and update properties. Directly click, zoom, and query individual nodes via temporal asks.
                 </p>
               </div>
             </div>
 
             {/* Card 5: Structured diffs */}
-            <div className="p-8 rounded-3xl bg-[#f5f3f1] border border-[#e7e5e4]/50 flex flex-col justify-between min-h-[300px] md:col-span-2 shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
-              <div className="text-[#292524]">
+            <div className="p-8 rounded-3xl bg-[var(--color-surface-subtle)] border border-[var(--color-hairline)]/50 flex flex-col justify-between min-h-[300px] md:col-span-2 shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
+              <div className="text-[var(--color-body-strong)]">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                   <path d="M12 3v18"/>
                   <path d="M5 12h14"/>
@@ -1202,16 +1242,16 @@ export default function LandingPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-[#0c0a09] mb-2 font-serif">Structured Diffs</h3>
-                <p className="text-sm text-[#4e4e4e] leading-relaxed max-w-lg">
+                <h3 className="text-lg font-medium text-[var(--color-ink)] mb-2 font-serif">Structured Diffs</h3>
+                <p className="text-sm text-[var(--color-body)] leading-relaxed max-w-lg">
                   Audit changes seamlessly with comprehensive lists of additions, removals, modifications, and new historical decisions. Provides additions (+), deletions (-), and conflict status mappings per reconciliation cycle.
                 </p>
               </div>
             </div>
 
             {/* Card 6: MCP server */}
-            <div className="p-8 rounded-3xl bg-[#f5f3f1] border border-[#e7e5e4]/50 flex flex-col justify-between min-h-[300px] shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
-              <div className="text-[#292524]">
+            <div className="p-8 rounded-3xl bg-[var(--color-surface-subtle)] border border-[var(--color-hairline)]/50 flex flex-col justify-between min-h-[300px] shadow-[0_4px_16px_rgba(0,0,0,0.02)]">
+              <div className="text-[var(--color-body-strong)]">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="6" width="20" height="12" rx="2"/>
                   <path d="M6 10h.01M10 10h.01M14 10h.01"/>
@@ -1219,8 +1259,8 @@ export default function LandingPage() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-lg font-medium text-[#0c0a09] mb-2 font-serif">Built-in MCP Server</h3>
-                <p className="text-sm text-[#4e4e4e] leading-relaxed">
+                <h3 className="text-lg font-medium text-[var(--color-ink)] mb-2 font-serif">Built-in MCP Server</h3>
+                <p className="text-sm text-[var(--color-body)] leading-relaxed">
                   Expose and sync your curated personal knowledge graph to custom agents or editor IDEs via standard MCP.
                 </p>
               </div>
@@ -1230,25 +1270,25 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ 7.6 · CREDIBILITY BAND ═══════ */}
-      <div className="relative z-10 py-8 bg-[#f0efed]/50 border-t border-b border-[#e7e5e4] text-center select-none animate-fade-in">
-        <div className="max-w-[1200px] mx-auto px-6 flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-xs text-[#777169] font-medium tracking-wide">
+      <div className="relative z-10 py-8 bg-[var(--color-surface-strong)]/50 border-t border-b border-[var(--color-hairline)] text-center select-none animate-fade-in">
+        <div className="max-w-[1200px] mx-auto px-6 flex flex-wrap items-center justify-center gap-x-12 gap-y-4 text-xs text-[var(--color-muted)] font-medium tracking-wide">
           <span>BUILT FOR: WeMakeDevs × Cognee Hackathon</span>
-          <span className="hidden sm:inline text-[#d6d3d1]">•</span>
-          <span>POWERED BY: <a href="https://cognee.ai" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors underline decoration-dotted underline-offset-4">Cognee Memory SDK</a></span>
-          <span className="hidden sm:inline text-[#d6d3d1]">•</span>
-          <span>DEVELOPED BY: <a href="https://nishantunavane.qzz.io" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors underline decoration-dotted underline-offset-4">Nishant Unavane</a></span>
+          <span className="hidden sm:inline text-[var(--color-hairline-strong)]">•</span>
+          <span>POWERED BY: <a href="https://cognee.ai" target="_blank" rel="noreferrer" className="hover:text-[var(--color-ink)] transition-colors underline decoration-dotted underline-offset-4">Cognee Memory SDK</a></span>
+          <span className="hidden sm:inline text-[var(--color-hairline-strong)]">•</span>
+          <span>DEVELOPED BY: <a href="https://nishantunavane.qzz.io" target="_blank" rel="noreferrer" className="hover:text-[var(--color-ink)] transition-colors underline decoration-dotted underline-offset-4">Nishant Unavane</a></span>
         </div>
       </div>
 
       {/* ═══════ 7.7 · FAQ SECTION (Accordion) ═══════ */}
-      <section id="faq" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+      <section id="faq" className="relative z-10 py-24 md:py-32 px-6 bg-[var(--color-canvas)] border-t border-[var(--color-hairline)]">
         <div className="max-w-[800px] mx-auto">
           <div className="text-center mb-16">
             <SectionLabel text="FAQ" color="bg-[#a8c8e8]" />
-            <h2 className="display-lg text-[#0c0a09] leading-[1.08] mb-4" style={{ fontWeight: 300 }}>
+            <h2 className="display-lg text-[var(--color-ink)] leading-[1.08] mb-4" style={{ fontWeight: 300 }}>
               Frequently Asked Questions
             </h2>
-            <p className="text-[#4e4e4e] text-base leading-relaxed tracking-[0.16px]">
+            <p className="text-[var(--color-body)] text-base leading-relaxed tracking-[0.16px]">
               Substantive answers to technical questions about Synapse&apos;s memory architecture.
             </p>
           </div>
@@ -1268,74 +1308,75 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════ 8 · CTA BAND ═══════ */}
-      <section id="cta" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] text-center border-t border-[#e7e5e4] overflow-hidden">
+      <section id="cta" className="relative z-10 py-24 md:py-32 px-6 bg-[var(--color-canvas)] text-center border-t border-[var(--color-hairline)] overflow-hidden">
         
 
 
         <div className="max-w-[800px] mx-auto flex flex-col items-center gap-8 relative z-10">
-          <SparkleIcon className="w-8 h-8 text-[#292524]/20" />
-          <h2 className="display-lg text-[#0c0a09] leading-[1.08] text-3xl sm:text-4xl md:text-5xl lg:text-6xl" style={{ fontWeight: 300 }}>
+          <SparkleIcon className="w-8 h-8 text-[var(--color-primary)]/20" />
+          <h2 className="display-lg text-[var(--color-ink)] leading-[1.08] text-3xl sm:text-4xl md:text-5xl lg:text-6xl" style={{ fontWeight: 300 }}>
             Stop re-explaining context.
           </h2>
-          <p className="text-[#4e4e4e] text-lg max-w-md tracking-[0.16px]">
+          <p className="text-[var(--color-body)] text-lg max-w-md tracking-[0.16px]">
             Build a memory graph that reconciles, decays, and actively maintains itself.
           </p>
           <button onClick={enter}
-            className="px-8 py-4 rounded-full bg-[#292524] text-white text-[15px] font-medium hover:bg-black transition-all duration-300 cursor-pointer w-full sm:w-auto text-center justify-center flex">
+            className="px-8 py-4 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[15px] font-medium hover:bg-black transition-all duration-300 cursor-pointer w-full sm:w-auto text-center justify-center flex">
             Initialize graph →
           </button>
         </div>
       </section>
 
       {/* ═══════ 9 · FOOTER ═══════ */}
-      <footer id="footer" className="relative z-10 bg-[#f5f5f5] border-t border-[#e7e5e4] py-16 px-6 select-none text-[13px]">
-        <div className="max-w-[1200px] mx-auto grid grid-cols-2 md:grid-cols-5 gap-12 text-[#4e4e4e]">
+      <footer id="footer" className="relative z-10 bg-[var(--color-canvas)] border-t border-[var(--color-hairline)] py-16 px-6 select-none text-[13px]">
+        <div className="max-w-[1200px] mx-auto grid grid-cols-2 md:grid-cols-5 gap-12 text-[var(--color-body)]">
           
           {/* Column 1: Brand details */}
           <div className="col-span-2 flex flex-col items-start gap-4">
             <Image
-              src={logoError ? "/images/synapse-logo.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
+              src={logoError ? "/images/synapse-logo.png" : !mounted ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : theme === "dark" ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
               alt="Synapse Logo"
               width={80}
               height={22}
               className="object-contain"
+              style={{ width: "auto", height: "auto" }}
               onError={() => setLogoError(true)}
             />
-            <p className="max-w-[200px] text-[#777169] leading-relaxed">
+            <p className="max-w-[200px] text-[var(--color-muted)] leading-relaxed">
               Autonomous memory visualization layers running on top of Cognee&apos;s semantic engine.
             </p>
           </div>
 
           {/* Column 2: Product */}
           <div className="flex flex-col gap-3">
-            <span className="font-semibold text-[#0c0a09] uppercase tracking-wider text-[10px]">Product</span>
-            <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="hover:text-[#0c0a09] transition-colors">Pipeline Ingest</a>
-            <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="hover:text-[#0c0a09] transition-colors">Reconciliation</a>
-            <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="hover:text-[#0c0a09] transition-colors">Memory Health</a>
-            <a href="#section-insights" onClick={(e) => handleNavClick(e, "#section-insights")} className="hover:text-[#0c0a09] transition-colors">Insights &amp; Guidance</a>
+            <span className="font-semibold text-[var(--color-ink)] uppercase tracking-wider text-[10px]">Product</span>
+            <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="hover:text-[var(--color-ink)] transition-colors">Pipeline Ingest</a>
+            <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="hover:text-[var(--color-ink)] transition-colors">Reconciliation</a>
+            <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="hover:text-[var(--color-ink)] transition-colors">Memory Health</a>
+            <a href="#section-insights" onClick={(e) => handleNavClick(e, "#section-insights")} className="hover:text-[var(--color-ink)] transition-colors">Insights &amp; Guidance</a>
           </div>
 
           {/* Column 3: Resources */}
           <div className="flex flex-col gap-3">
-            <span className="font-semibold text-[#0c0a09] uppercase tracking-wider text-[10px]">Resources</span>
-            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">GitHub</a>
-            <a href="https://github.com/IamNishant51/Synapse-Ai/blob/main/README.md" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Documentation</a>
-            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Video Demo</a>
+            <span className="font-semibold text-[var(--color-ink)] uppercase tracking-wider text-[10px]">Resources</span>
+            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="hover:text-[var(--color-ink)] transition-colors">GitHub</a>
+            <a href="https://github.com/IamNishant51/Synapse-Ai/blob/main/README.md" target="_blank" rel="noreferrer" className="hover:text-[var(--color-ink)] transition-colors">Documentation</a>
+            <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="hover:text-[var(--color-ink)] transition-colors">Video Demo</a>
           </div>
 
           {/* Column 4: Tech Stack */}
           <div className="flex flex-col gap-3">
-            <span className="font-semibold text-[#0c0a09] uppercase tracking-wider text-[10px]">Frameworks</span>
-            <a href="https://cognee.ai" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Cognee SDK</a>
-            <a href="https://nextjs.org" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Next.js 15</a>
-            <a href="https://fastapi.tiangolo.com" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">FastAPI</a>
+            <span className="font-semibold text-[var(--color-ink)] uppercase tracking-wider text-[10px]">Frameworks</span>
+            <a href="https://cognee.ai" target="_blank" rel="noreferrer" className="hover:text-[var(--color-ink)] transition-colors">Cognee SDK</a>
+            <a href="https://nextjs.org" target="_blank" rel="noreferrer" className="hover:text-[var(--color-ink)] transition-colors">Next.js 15</a>
+            <a href="https://fastapi.tiangolo.com" target="_blank" rel="noreferrer" className="hover:text-[var(--color-ink)] transition-colors">FastAPI</a>
           </div>
 
         </div>
 
-        <div className="max-w-[1200px] mx-auto mt-16 pt-8 border-t border-[#e7e5e4] flex flex-col md:flex-row items-center justify-between gap-4 text-[#777169]">
+        <div className="max-w-[1200px] mx-auto mt-16 pt-8 border-t border-[var(--color-hairline)] flex flex-col md:flex-row items-center justify-between gap-4 text-[var(--color-muted)]">
           <p>© 2026 Synapse AI. Built for WeMakeDevs x Cognee Hackathon.</p>
-          <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="hover:text-[#0c0a09] transition-colors">Repository Home</a>
+          <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="hover:text-[var(--color-ink)] transition-colors">Repository Home</a>
         </div>
       </footer>
     </div>

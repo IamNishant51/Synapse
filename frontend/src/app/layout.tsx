@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
-import { Inter, EB_Garamond } from "next/font/google";
+import { Inter, EB_Garamond, Geist } from "next/font/google";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({
   subsets: ["latin"],
@@ -56,8 +59,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="en"
       className={`${inter.variable} ${garamond.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="h-full bg-canvas text-ink">
+        <script dangerouslySetInnerHTML={{
+          __html: `requestAnimationFrame(()=>document.documentElement.classList.add("theme-transition"))`
+        }} />
         <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>

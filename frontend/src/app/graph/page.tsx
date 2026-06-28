@@ -7,10 +7,11 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import EmptyState from "@/components/EmptyState";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
-import { getConfidenceColor, tokens } from "@/lib/design-tokens";
+import { getConfidenceColor } from "@/lib/design-tokens";
 import { getGraphSnapshot, forgetNode, getConflictEvents, resetDemoData, summarizeNode, getSchemaInventory } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useAIConfig } from "@/context/AIConfigContext";
+import { useTheme } from "next-themes";
 import * as THREE from "three";
 import type { GraphNode, GraphEdge } from "@/lib/types";
 
@@ -23,16 +24,21 @@ interface NodeDetail extends GraphNode {
   z?: number;
 }
 
+function cssVar(name: string): string {
+  if (typeof document === "undefined") return "#000000";
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#000000";
+}
+
 const COLORS = {
-  active: tokens.colors["confidence-fresh"],
-  superseded: "#777169",
-  rejected: "#dc2626",
-  forgotten: "#d6d3d1",
-  edge: "#e7e5e4",
-  particle: tokens.colors["confidence-fresh"],
-  fresh: tokens.colors["confidence-fresh"],
-  fading: tokens.colors["confidence-fading"],
-  stale: tokens.colors["confidence-stale"],
+  get active() { return cssVar("--color-confidence-fresh"); },
+  get superseded() { return cssVar("--color-muted"); },
+  get rejected() { return cssVar("--color-semantic-danger"); },
+  get forgotten() { return cssVar("--color-hairline-strong"); },
+  get edge() { return cssVar("--color-hairline"); },
+  get particle() { return cssVar("--color-confidence-fresh"); },
+  get fresh() { return cssVar("--color-confidence-fresh"); },
+  get fading() { return cssVar("--color-confidence-fading"); },
+  get stale() { return cssVar("--color-confidence-stale"); },
 };
 
 function interpolateColor(color1: string, color2: string, factor: number) {
@@ -95,7 +101,7 @@ function GraphLoadingSkeleton() {
   ];
 
   const nodeColor = (i: number) =>
-    i === 4 ? "#292524" : i % 2 === 0 ? "#777169" : "#a8a29e";
+    i === 4 ? "#777169" : i % 2 === 0 ? "#a8a29e" : "#d6d3d1";
 
   return (
     <div className="absolute inset-0 flex items-center justify-center z-10 bg-canvas">
@@ -108,9 +114,10 @@ function GraphLoadingSkeleton() {
               <line
                 key={`e${i}`}
                 x1={s.cx} y1={s.cy} x2={t.cx} y2={t.cy}
-                stroke="#d6d3d1"
+                stroke="currentColor"
                 strokeWidth="1"
                 strokeLinecap="round"
+                className="text-hairline-strong"
                 strokeDasharray="200"
                 strokeDashoffset="200"
                 opacity="0"
@@ -583,15 +590,15 @@ export default function GraphPage() {
       node.x, node.y, 0,
       node.x, node.y, finalRadius
     );
-    const lightCenter = level === "fresh" ? "#52525b" : level === "fading" ? "#a1a1aa" : "#f4f4f5";
+    const lightCenter = level === "fresh" ? cssVar("--color-confidence-fading") : level === "fading" ? cssVar("--color-confidence-stale") : cssVar("--color-hairline");
     gradient.addColorStop(0, lightCenter);
     gradient.addColorStop(1, color);
 
     ctx.fillStyle = gradient;
     ctx.fill();
 
-    const baseStroke = level === "fresh" ? "#27272a" : level === "fading" ? "#3f3f46" : "#a1a1aa";
-    const hoverStroke = level === "fresh" ? "#f4f4f5" : level === "fading" ? "#f4f4f5" : "#ffffff";
+    const baseStroke = level === "fresh" ? cssVar("--color-hairline-strong") : level === "fading" ? cssVar("--color-muted") : cssVar("--color-hairline");
+    const hoverStroke = level === "fresh" ? cssVar("--color-ink") : level === "fading" ? cssVar("--color-ink") : cssVar("--color-on-dark");
     const strokeColor = interpolateColor(baseStroke, hoverStroke, state.hoverProgress);
 
     ctx.strokeStyle = strokeColor;
@@ -603,7 +610,7 @@ export default function GraphPage() {
     ctx.font = isSelected ? `600 ${fontSize}px sans-serif` : `${fontSize}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = isSelected ? "#0c0a09" : "#4e4e4e";
+    ctx.fillStyle = isSelected ? cssVar("--color-ink") : cssVar("--color-body");
     ctx.fillText(label, node.x, node.y + size * currentScale + 12);
   }, [hoveredNode, selectedNode]);
 
@@ -738,13 +745,13 @@ export default function GraphPage() {
                     ctx.arc(x, y, size, 0, 2 * Math.PI, false);
 
                     if (isActive) {
-                      ctx.shadowColor = "rgba(217, 119, 6, 0.85)";
+                      ctx.shadowColor = cssVar("--color-conflict-warning") + "85";
                       ctx.shadowBlur = 12;
-                      ctx.fillStyle = "#d97706";
+                      ctx.fillStyle = cssVar("--color-conflict-warning");
                     } else {
-                      ctx.shadowColor = "rgba(168, 162, 158, 0.35)";
+                      ctx.shadowColor = cssVar("--color-muted-soft") + "59";
                       ctx.shadowBlur = 4;
-                      ctx.fillStyle = "#78716c";
+                      ctx.fillStyle = cssVar("--color-muted-soft");
                     }
 
                     ctx.fill();
@@ -752,7 +759,7 @@ export default function GraphPage() {
                   }}
                   onNodeClick={handleNodeClick}
                   onNodeHover={setHoveredNode}
-                  backgroundColor="#f5f5f5"
+                  backgroundColor={cssVar("--color-canvas")}
                   nodeLabel="label"
                   d3VelocityDecay={0.3}
                   d3AlphaDecay={0.02}
@@ -772,11 +779,11 @@ export default function GraphPage() {
                   linkDirectionalParticles={(link) => isConnectedToActiveNode(link) ? 4 : 1}
                   linkDirectionalParticleSpeed={(link) => isConnectedToActiveNode(link) ? 0.015 : 0.003}
                   linkDirectionalParticleWidth={(link) => isConnectedToActiveNode(link) ? 2.5 : 1.2}
-                  linkDirectionalParticleColor={(link) => isConnectedToActiveNode(link) ? "#d97706" : "#a8a29e"}
+                  linkDirectionalParticleColor={(link) => isConnectedToActiveNode(link) ? cssVar("--color-conflict-warning") : cssVar("--color-muted-soft")}
                   linkCurvature={0.05}
                   onNodeClick={handleNodeClick}
                   onNodeHover={setHoveredNode}
-                  backgroundColor="#f5f5f5"
+                  backgroundColor={cssVar("--color-canvas")}
                   nodeLabel="label"
                   nodeResolution={24}
                   d3VelocityDecay={0.3}

@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png" alt="Synapse" width="320" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/IamNishant51/Synapse-Ai/main/LOGO-WHITE.png">
+    <img src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png" alt="Synapse" width="320" />
+  </picture>
 </p>
 
 # Synapse: The Autonomous Memory Dashboard
