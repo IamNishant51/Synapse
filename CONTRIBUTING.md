@@ -1,9 +1,7 @@
 # Contributing to Synapse
 
 Thanks for considering a contribution. Synapse is a self-organizing personal
-knowledge graph built on Cognee — before contributing, read `cognee_hackathon.md`
-for the product vision and `AGENTS.md` for engineering conventions used throughout
-this codebase.
+knowledge graph built on Cognee.
 
 ## Getting started
 
@@ -22,8 +20,7 @@ history) are concrete, well-scoped starting points.
 ## Code conventions
 
 - **Backend**: type hints everywhere, Pydantic models for request/response shapes,
-  never a bare `except:` (see `AGENTS.md` §6 for the full anti-fabrication/
-  anti-misattribution standard this project holds itself to).
+  never a bare `except:`.
 - **Frontend**: TypeScript strict, Tailwind via the design tokens in
   `lib/design-tokens.ts` — no inline magic-number colors or spacing.
 - Run `ruff check backend/` and `npx eslint .` (from the `frontend/` directory)
