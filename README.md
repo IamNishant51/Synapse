@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png" alt="Synapse" width="320" />
+</p>
+
 # Synapse: The Autonomous Memory Dashboard
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)

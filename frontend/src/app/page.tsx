@@ -437,6 +437,7 @@ export default function LandingPage() {
             <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">How it works</a>
             <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Reconciliation</a>
             <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Memory Health</a>
+            <a href="#section-insights" onClick={(e) => handleNavClick(e, "#section-insights")} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Insights</a>
             <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">GitHub</a>
             <a href="/settings" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors">Sign In</a>
             <button onClick={enter}
@@ -463,6 +464,7 @@ export default function LandingPage() {
             <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">How it works</a>
             <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">Reconciliation</a>
             <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">Memory Health</a>
+            <a href="#section-insights" onClick={(e) => handleNavClick(e, "#section-insights")} className="text-[15px] font-medium text-[#4e4e4e] w-full py-1">Insights</a>
             <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" onClick={() => setIsMobileMenuOpen(false)} className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors w-full py-1">GitHub</a>
             <a href="/settings" className="text-[15px] font-medium text-[#4e4e4e] hover:text-[#0c0a09] transition-colors w-full py-1">Sign In</a>
             <button onClick={enter}
@@ -985,7 +987,89 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════ 7.5 · CAPABILITIES (Bento Grid) ═══════ */}
+      {/* ═══════ 7.5 · INSIGHTS & GUIDANCE (Provenance, Schema, Session, Filtering) ═══════ */}
+      <section id="section-insights" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
+        <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
+
+          {/* Left Column: Text + feature cards */}
+          <div className="text-left md:col-span-6 flex flex-col gap-8">
+            <div>
+              <SectionLabel text="INSIGHTS & GUIDANCE" color="bg-[#a8e0c8]" />
+              <h2 className="display-lg text-[#0c0a09] mb-8 leading-[1.08]" style={{ fontWeight: 300 }}>
+                See what your memory knows.
+              </h2>
+              <p className="text-[#4e4e4e] text-base leading-relaxed tracking-[0.16px]">
+                New tools that expose the inner structure of your graph: provenance traces, schema inventory, session distillation, and entity-level filtering.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {[
+                { title: "Memory Provenance", desc: "Visualize the exact path each piece of knowledge took before entering your graph." },
+                { title: "Schema Inventory", desc: "Browse all entity types in your graph with counts — classes, frameworks, patterns detected." },
+                { title: "Session Distillation", desc: "Compress active-session context into structured guidance. No more re-explaining." },
+                { title: "Graph Type Filtering", desc: "Filter the 3D graph by entity type to focus on specific knowledge domains." }
+              ].map((item) => (
+                <div key={item.title} className="bg-white border border-[#e7e5e4] p-5 rounded-xl flex items-start gap-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
+                  <div className="w-2 h-2 rounded-full bg-[#a8e0c8] mt-1.5 shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#0c0a09]">{item.title}</h4>
+                    <p className="text-xs text-[#777169] mt-1 leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Column: Settings screenshot */}
+          <div className="md:col-span-6 flex justify-center items-center">
+            <BrowserChrome url="localhost:3000/settings">
+              <div className="p-6 bg-white font-sans select-none pointer-events-none">
+                <div className="text-[10px] uppercase tracking-wider text-[#777169] font-semibold mb-4 border-b border-[#e7e5e4] pb-3">
+                  Memory Insights
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="border border-[#e7e5e4] rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#a8e0c8]/30 grid place-items-center text-[10px] font-bold text-[#292524]">P</div>
+                      <div>
+                        <div className="text-[11px] font-medium text-[#0c0a09]">Provenance</div>
+                        <div className="text-[9px] text-[#777169]">View trace path</div>
+                      </div>
+                    </div>
+                    <div className="text-[8px] text-white bg-[#292524] px-2.5 py-1 rounded-full font-medium">View &#8594;</div>
+                  </div>
+                  <div className="border border-[#e7e5e4] rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#c8b8e0]/30 grid place-items-center text-[10px] font-bold text-[#292524]">S</div>
+                      <div>
+                        <div className="text-[11px] font-medium text-[#0c0a09]">Schema Inventory</div>
+                        <div className="text-[9px] text-[#777169]">8 entity types</div>
+                      </div>
+                    </div>
+                    <div className="text-[8px] text-white bg-[#292524] px-2.5 py-1 rounded-full font-medium">Load &#8594;</div>
+                  </div>
+                  <div className="border border-[#e7e5e4] rounded-xl p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-[#f4c5a8]/30 grid place-items-center text-[10px] font-bold text-[#292524]">D</div>
+                      <div>
+                        <div className="text-[11px] font-medium text-[#0c0a09]">Session Guidance</div>
+                        <div className="text-[9px] text-[#777169]">Distill context</div>
+                      </div>
+                    </div>
+                    <div className="text-[8px] text-white bg-[#292524] px-2.5 py-1 rounded-full font-medium">Distill &#8594;</div>
+                  </div>
+                </div>
+                <div className="mt-3 text-[8px] text-[#a8a29e] text-center border-t border-[#e7e5e4] pt-3">
+                  Settings Dashboard — Memory Insights panel
+                </div>
+              </div>
+            </BrowserChrome>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════ 7.6 · CAPABILITIES (Bento Grid) ═══════ */}
       <section id="section-capabilities" className="relative z-10 py-24 md:py-32 px-6 bg-[#f5f5f5] border-t border-[#e7e5e4]">
         <div className="max-w-[1200px] mx-auto">
           <div className="text-center mb-16">
@@ -1228,6 +1312,7 @@ export default function LandingPage() {
             <a href="#section-ingest" onClick={(e) => handleNavClick(e, "#section-ingest")} className="hover:text-[#0c0a09] transition-colors">Pipeline Ingest</a>
             <a href="#section-resolve" onClick={(e) => handleNavClick(e, "#section-resolve")} className="hover:text-[#0c0a09] transition-colors">Reconciliation</a>
             <a href="#section-decay" onClick={(e) => handleNavClick(e, "#section-decay")} className="hover:text-[#0c0a09] transition-colors">Memory Health</a>
+            <a href="#section-insights" onClick={(e) => handleNavClick(e, "#section-insights")} className="hover:text-[#0c0a09] transition-colors">Insights &amp; Guidance</a>
           </div>
 
           {/* Column 3: Resources */}

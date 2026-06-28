@@ -12,6 +12,7 @@ const navItems = [
   { href: "/ingest", label: "Ingest", icon: IngestIcon },
   { href: "/resolve", label: "Resolve", icon: ResolveIcon },
   { href: "/ask", label: "Ask", icon: AskIcon },
+  { href: "/provenance", label: "Provenance", icon: ProvenanceIcon },
   { href: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 
@@ -126,6 +127,20 @@ export default function NavRail() {
 }
 
 /* ── SVG Icons — clean, editorial line style ── */
+
+function ProvenanceIcon({ active }: { active: boolean }) {
+  const c = active ? "#0c0a09" : "#a8a29e";
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M2 2v12a2 2 0 002 2h12" stroke={c} strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M6 10l3-4 3 3 4-5" stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="6" cy="10" r="1.5" fill={c} />
+      <circle cx="9" cy="6" r="1.5" fill={c} />
+      <circle cx="12" cy="9" r="1.5" fill={c} />
+      <circle cx="16" cy="4" r="1.5" fill={c} />
+    </svg>
+  );
+}
 
 function GraphIcon({ active }: { active: boolean }) {
   const c = active ? "#0c0a09" : "#a8a29e";

@@ -363,26 +363,6 @@ export default function SettingsPage() {
         <section className="mb-10">
           <div className="caption-upper text-muted mb-3.5">Memory Insights</div>
           <div className="p-4 sm:p-6 md:p-8 rounded-2xl bg-surface-card border border-hairline shadow-[0_4px_16px_rgba(0,0,0,0.02)] space-y-6">
-            {/* Visualize Memory Provenance */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-semibold text-body-strong">Memory Provenance</h3>
-                <p className="text-xs text-muted-soft mt-1 leading-relaxed max-w-lg">
-                  Generate a self-contained HTML visualization of your memory graph&apos;s full ownership and data-flow story — where every memory came from, who created it, and how it is connected.
-                </p>
-              </div>
-              <a
-                href="/api/proxy/provenance"
-                target="_blank"
-                rel="noreferrer"
-                className="px-5 py-2.5 rounded-full bg-primary text-on-primary text-[14px] font-semibold hover:bg-primary-active active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-sm whitespace-nowrap text-center"
-              >
-                View Provenance →
-              </a>
-            </div>
-
-            <div className="border-t border-hairline-soft" />
-
             {/* Schema Inventory */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div className="flex-1">
