@@ -1,12 +1,17 @@
 # Synapse: The Autonomous Memory Dashboard
 
-**[Live Demo](https://synapse-knowledge.vercel.app)** | **[Watch the 100-Second Demo Video (Coming Soon)](#)** | **Built by [Nishant Unavane](https://nishantunavane.qzz.io)**
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI](https://github.com/IamNishant51/Synapse----Ai-/actions/workflows/ci.yml/badge.svg)](https://github.com/IamNishant51/Synapse----Ai-/actions/workflows/ci.yml)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-## 🔑 Quick Access
+**[Live Demo](https://synapse-knowledge.vercel.app)** |
+**Built by [Nishant Unavane](https://nishantunavane.qzz.io)**
+
+## Quick Access
 
 **Live demo:** [https://synapse-knowledge.vercel.app](https://synapse-knowledge.vercel.app)
 
-The demo is open and fully accessible — no authentication required during the review period. For AI features (querying, ingestion, memory reconciliation), click **"Configure AI"** in Settings and bring your own API key.
+The demo is open and fully accessible — no authentication required during the hackathon review period. For AI features (querying, ingestion, memory reconciliation), click **"Configure AI"** in Settings and bring your own API key. After judging concludes, the shared-secret access gate will be re-enabled.
 
 ---
 
@@ -152,6 +157,14 @@ Self-hosting users can connect their own accounts/keys for Groq, OpenAI, or Gemi
    npm run dev
    ```
 4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, code conventions, and the pull request process. This project also uses a [Code of Conduct](CODE_OF_CONDUCT.md) and has a [security policy](SECURITY.md).
+
+Look for issues tagged [`good first issue`](https://github.com/IamNishant51/Synapse----Ai-/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) for well-scoped starting points.
 
 ---
 

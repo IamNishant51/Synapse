@@ -41,7 +41,7 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from dotenv import load_dotenv
 load_dotenv()
 
-from database import (
+from database import (  # noqa: E402
     db_init,
     db_reseed,
     db_save_source,
@@ -59,9 +59,7 @@ from database import (
     db_update_decay_settings,
     db_update_source_content,
     db_get_source_content,
-    db_save_user_ai_config,
     db_get_user_ai_config,
-    db_delete_user_ai_config,
 )
 db_init()
 
