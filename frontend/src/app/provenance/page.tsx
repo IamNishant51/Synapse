@@ -3,6 +3,16 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
+function stripHashSync(html: string): string {
+  const start = html.indexOf("// ── URL hash sync");
+  if (start === -1) return html;
+
+  const end = html.indexOf("function row(", start);
+  if (end === -1) return html;
+
+  return html.slice(0, start) + html.slice(end);
+}
+
 export default function ProvenancePage() {
   const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -12,6 +22,7 @@ export default function ProvenancePage() {
   useEffect(() => {
     fetch("/api/proxy/provenance")
       .then((r) => r.text())
+      .then(stripHashSync)
       .then(setHtml)
       .catch((e) => setError(e.message));
   }, []);
