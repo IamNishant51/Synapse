@@ -1,6 +1,6 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/IamNishant51/Synapse-Ai/main/LOGO-WHITE.png">
+    <source media="(prefers-color-scheme: dark)" srcset="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png">
     <img src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png" alt="Synapse" width="320" />
   </picture>
 </p>
