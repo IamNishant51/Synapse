@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useIngestion } from "@/context/IngestionContext";
 import { useAIConfig } from "@/context/AIConfigContext";
@@ -25,14 +25,19 @@ export default function NavRail() {
   const { config, openModal, loading: loadingAI } = useAIConfig();
   const { theme, setTheme } = useTheme();
   const { data: session } = useSession();
+  const [mounted, setMounted] = useState(false);
   const [logoError, setLogoError] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const isDark = mounted && theme === "dark";
 
   return (
     <aside className="fixed bottom-0 md:top-0 left-0 z-40 flex w-full h-14 md:h-full md:w-56 flex-row md:flex-col bg-canvas border-t md:border-t-0 md:border-r border-hairline">
       {/* Brand */}
       <div className="hidden md:flex items-center px-5 pt-5 pb-6">
         <Image
-          src={logoError ? "/images/synapse-logo.png" : theme === "dark" ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
+          src={logoError ? "/images/synapse-logo.png" : isDark ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
           alt="Synapse"
           width={96}
           height={28}
@@ -61,7 +66,7 @@ export default function NavRail() {
               }`}
             >
               <div className="flex flex-col md:flex-row items-center gap-1 md:gap-2.5 relative">
-                <item.icon active={isActive} />
+                <item.icon />
                 <span className="mt-0.5 md:mt-0 font-medium tracking-wide" style={{ letterSpacing: "0.15px" }}>{item.label}</span>
                 {isSyncing && (
                   <span className="absolute -top-1 -right-2 md:relative md:top-auto md:right-auto flex h-2 w-2 md:mr-1">
@@ -107,10 +112,10 @@ export default function NavRail() {
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-strong hover:bg-surface-strong/80 border border-hairline w-full text-muted hover:text-ink transition-colors cursor-pointer"
-          title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+          title={mounted ? `Switch to ${isDark ? "light" : "dark"} mode` : "Toggle theme"}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            {theme === "dark" ? (
+            {isDark ? (
               <>
                 <circle cx="12" cy="12" r="5" />
                 <line x1="12" y1="1" x2="12" y2="3" />
@@ -126,7 +131,7 @@ export default function NavRail() {
               <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
             )}
           </svg>
-          <span className="text-[11px] font-medium">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
+          <span className="text-[11px] font-medium">{mounted ? (isDark ? "Light mode" : "Dark mode") : ""}</span>
         </button>
 
         {/* AI Config Pill */}
@@ -215,7 +220,7 @@ export default function NavRail() {
 
 /* ── SVG Icons — clean, editorial line style ── */
 
-function ProvenanceIcon({ active: _a }: { active: boolean }) {
+function ProvenanceIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 2v12a2 2 0 002 2h12" />
@@ -228,7 +233,7 @@ function ProvenanceIcon({ active: _a }: { active: boolean }) {
   );
 }
 
-function GraphIcon({ active: _a }: { active: boolean }) {
+function GraphIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="9" cy="4" r="2" />
@@ -241,7 +246,7 @@ function GraphIcon({ active: _a }: { active: boolean }) {
   );
 }
 
-function IngestIcon({ active: _a }: { active: boolean }) {
+function IngestIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 2v14" />
@@ -250,7 +255,7 @@ function IngestIcon({ active: _a }: { active: boolean }) {
   );
 }
 
-function ResolveIcon({ active: _a }: { active: boolean }) {
+function ResolveIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="3" width="6" height="12" rx="1.5" />
@@ -260,7 +265,7 @@ function ResolveIcon({ active: _a }: { active: boolean }) {
   );
 }
 
-function AskIcon({ active: _a }: { active: boolean }) {
+function AskIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 1.5C4.86 1.5 1.5 4.86 1.5 9c0 4.14 3.36 7.5 7.5 7.5h7.5V9c0-4.14-3.36-7.5-7.5-7.5z" />
@@ -270,7 +275,7 @@ function AskIcon({ active: _a }: { active: boolean }) {
   );
 }
 
-function SettingsIcon({ active: _a }: { active: boolean }) {
+function SettingsIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="3" />

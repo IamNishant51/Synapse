@@ -46,7 +46,7 @@ export function AIConfigProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       await deleteAIConfig();
-      await refreshConfig();
+      setConfig({ configured: false });
       addToast("AI configuration disconnected successfully", "success");
     } catch (err) {
       addToast("Failed to disconnect AI configuration", "error");
@@ -54,7 +54,7 @@ export function AIConfigProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [refreshConfig, addToast]);
+  }, [addToast]);
 
   return (
     <AIConfigContext.Provider

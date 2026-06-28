@@ -1,4 +1,5 @@
 from typing import Optional
+from cache import cache as memory_cache
 from models import (
     IngestRequest,
     IngestResponse,
@@ -708,6 +709,9 @@ async def run_reconciliation(content: str, label: str, date: str) -> list[dict]:
 
 
 async def get_graph_snapshot() -> GraphSnapshot:
+    cached = memory_cache.get("graph_snapshot")
+    if cached is not None:
+        return cached
     # Try to fetch real graph data from Cognee first
     if COGNEE_READY:
         apply_cognee_llm_config()
@@ -752,7 +756,9 @@ async def get_graph_snapshot() -> GraphSnapshot:
                     mapped_nodes = mapped_nodes[:MAX_NODES]
                     node_ids = {n.id for n in mapped_nodes}
                     mapped_edges = [e for e in mapped_edges if e.source in node_ids and e.target in node_ids]
-                return GraphSnapshot(nodes=mapped_nodes, edges=mapped_edges)
+                result = GraphSnapshot(nodes=mapped_nodes, edges=mapped_edges)
+                memory_cache.set("graph_snapshot", result, ttl=30)
+                return result
         except Exception as cognee_err:
             print(f"[Cognee] get_memory_provenance_graph failed: {cognee_err}", flush=True)
 
@@ -856,7 +862,9 @@ async def get_graph_snapshot() -> GraphSnapshot:
         node_ids = {n.id for n in nodes}
         edges = [e for e in edges if e.source in node_ids and e.target in node_ids]
 
-    return GraphSnapshot(nodes=nodes, edges=edges)
+    result = GraphSnapshot(nodes=nodes, edges=edges)
+    memory_cache.set("graph_snapshot", result, ttl=30)
+    return result
 
 
 def extract_query_terms(query: str) -> list[str]:
@@ -968,12 +976,17 @@ def get_relevant_db_context(query: str, db_sources: list, db_conflicts: list) ->
 
 
 def get_ask_topics() -> dict[str, list[str]]:
+    cached = memory_cache.get("ask_topics")
+    if cached is not None:
+        return cached
     tracked_topics = db_get_distinct_topics()
     timeline_topics = db_get_timeline_topics()
-    return {
+    result = {
         "trackedTopics": tracked_topics,
         "timelineTopics": timeline_topics,
     }
+    memory_cache.set("ask_topics", result, ttl=60)
+    return result
 
 
 _commits_cache: dict[str, tuple[float, str]] = {}
@@ -1362,6 +1375,7 @@ async def resolve_conflict(req: ResolveRequest) -> None:
 
 
 async def run_decay_check() -> DecayResult:
+    memory_cache.invalidate("graph_snapshot")
     now_dt = datetime.now(timezone.utc)
     now = now_dt.isoformat()
     decayed = 0
@@ -1369,6 +1383,11 @@ async def run_decay_check() -> DecayResult:
     
     settings = db_get_decay_settings()
     db_conflicts = db_get_conflicts(include_resolved=True)
+    
+    all_history = db_get_confidence_history()
+    history_by_topic: dict[str, list] = {}
+    for entry in all_history:
+        history_by_topic.setdefault(entry.topic, []).append(entry)
     
     for c in db_conflicts:
         if c.status == "forgotten":
@@ -1383,7 +1402,7 @@ async def run_decay_check() -> DecayResult:
         days_since = max(0, (now_dt - created).days)
         
         # Get original confidence from confidence history (first entry for this topic)
-        history = db_get_confidence_history(c.topic)
+        history = history_by_topic.get(c.topic, [])
         original_entry = history[0] if history else None
         original_confidence = original_entry.confidenceScore if original_entry else c.llmConfidence
         
@@ -1433,7 +1452,12 @@ async def update_decay_settings(settings: DecaySettings) -> None:
 
 
 async def get_sources() -> list[Source]:
-    return db_get_sources()
+    cached = memory_cache.get("sources")
+    if cached is not None:
+        return cached
+    result = db_get_sources()
+    memory_cache.set("sources", result, ttl=30)
+    return result
 
 
 async def generate_node_summary(node_id: str, label: str, source: str) -> str:
@@ -1467,6 +1491,7 @@ async def forget_node(node_id: str) -> None:
             log_cognee_activity("forget()", f"Pruned node ID '{node_id[:20]}' from graph")
         except Exception as cognee_err:
             print(f"[Cognee] forget failed: {cognee_err}", flush=True)
+    memory_cache.invalidate("graph_snapshot")
 
 
 async def forget_source(source_id: str) -> None:
@@ -1481,6 +1506,8 @@ async def forget_source(source_id: str) -> None:
                 log_cognee_activity("forget()", f"Pruned source document '{target_source.label}'")
             except Exception:
                 pass
+    memory_cache.invalidate("sources")
+    memory_cache.invalidate("graph_snapshot")
 
 
 async def get_memory_provenance_html() -> str:
@@ -1497,12 +1524,16 @@ async def get_memory_provenance_html() -> str:
 
 
 async def get_schema_inventory_data() -> list[dict]:
+    cached = memory_cache.get("schema_inventory")
+    if cached is not None:
+        return cached
     if not COGNEE_READY:
         return []
     apply_cognee_llm_config()
     try:
         result = await cognee.get_schema_inventory(dataset=COGNEE_DATASET, samples_per_type=3)
         log_cognee_activity("get_schema_inventory()", f"Retrieved {len(result)} entity types")
+        memory_cache.set("schema_inventory", result, ttl=60)
         return result
     except Exception as e:
         log_cognee_activity("get_schema_inventory_error", str(e))

@@ -230,7 +230,7 @@ function GraphLoadingSkeleton() {
 export default function GraphPage() {
   const router = useRouter();
   const { config, loading: loadingAI, openModal } = useAIConfig();
-  const { resolvedTheme } = useTheme();
+  useTheme();
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);

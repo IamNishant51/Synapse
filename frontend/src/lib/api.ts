@@ -10,6 +10,7 @@ import type {
   SessionEntry,
   GuidanceResult,
 } from "./types";
+import { setCache, getCache, invalidateCache, dedupeRequest } from "./api-cache";
 
 const API_BASE = "/api/proxy";
 
@@ -33,19 +34,11 @@ function parseAPIError(status: number, body: string): string {
       return detail;
     }
   } catch {}
-  
-  if (status === 403) {
-    return "Access denied.";
-  }
-  if (status === 401) {
-    return "Unauthorized session. Please check your credentials.";
-  }
-  if (status === 404) {
-    return "Requested resource not found.";
-  }
-  if (status >= 500) {
-    return "Server error. Make sure the backend is running correctly.";
-  }
+
+  if (status === 403) return "Access denied.";
+  if (status === 401) return "Unauthorized session. Please check your credentials.";
+  if (status === 404) return "Requested resource not found.";
+  if (status >= 500) return "Server error. Make sure the backend is running correctly.";
   return `Request failed with status ${status}`;
 }
 
@@ -66,6 +59,16 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return res.json();
 }
 
+function cachedFetch<T>(endpoint: string, ttlMs: number): Promise<T> {
+  const cached = getCache<T>(endpoint);
+  if (cached) return Promise.resolve(cached);
+  return dedupeRequest(endpoint, async () => {
+    const data = await fetchAPI<T>(endpoint);
+    setCache(endpoint, data, ttlMs);
+    return data;
+  }, { method: "GET" });
+}
+
 export async function ingestSource(
   type: SourceType,
   content: string,
@@ -73,10 +76,12 @@ export async function ingestSource(
   url?: string,
   pathFilter?: string,
 ): Promise<{ jobId: string }> {
-  return fetchAPI("/ingest", {
+  const result = await fetchAPI<{ jobId: string }>("/ingest", {
     method: "POST",
     body: JSON.stringify({ type, content, label, url, pathFilter }),
   });
+  invalidateCache("/ingest");
+  return result;
 }
 
 export async function getIngestionJob(jobId: string): Promise<IngestionJob> {
@@ -84,7 +89,7 @@ export async function getIngestionJob(jobId: string): Promise<IngestionJob> {
 }
 
 export async function getGraphSnapshot(): Promise<GraphSnapshot> {
-  return fetchAPI("/graph-snapshot");
+  return cachedFetch<GraphSnapshot>("/graph-snapshot", 30_000);
 }
 
 export async function forgetNode(nodeId: string): Promise<void> {
@@ -92,6 +97,7 @@ export async function forgetNode(nodeId: string): Promise<void> {
     method: "POST",
     body: JSON.stringify({ nodeId }),
   });
+  invalidateCache("/forget/node");
 }
 
 export async function forgetSource(sourceId: string): Promise<void> {
@@ -99,10 +105,11 @@ export async function forgetSource(sourceId: string): Promise<void> {
     method: "POST",
     body: JSON.stringify({ sourceId }),
   });
+  invalidateCache("/forget/source");
 }
 
 export async function getConflictEvents(): Promise<ConflictEvent[]> {
-  return fetchAPI("/reconciliation/events");
+  return cachedFetch<ConflictEvent[]>("/reconciliation/events", 30_000);
 }
 
 export async function resolveConflict(
@@ -114,6 +121,7 @@ export async function resolveConflict(
     method: "POST",
     body: JSON.stringify({ eventId, resolution, note }),
   });
+  invalidateCache("/reconciliation/resolve");
 }
 
 export async function answerQuery(query: string, signal?: AbortSignal): Promise<ChatMessage> {
@@ -125,17 +133,19 @@ export async function answerQuery(query: string, signal?: AbortSignal): Promise<
 }
 
 export async function getAskTopics(): Promise<{ trackedTopics: string[]; timelineTopics: string[] }> {
-  return fetchAPI("/topics");
+  return cachedFetch<{ trackedTopics: string[]; timelineTopics: string[] }>("/topics", 60_000);
 }
 
 export async function runDecayCheck(): Promise<{ forgotten: number; decayed: number }> {
-  return fetchAPI("/decay/run", {
+  const result = await fetchAPI<{ forgotten: number; decayed: number }>("/decay/run", {
     method: "POST",
   });
+  invalidateCache("/reset-demo");
+  return result;
 }
 
 export async function getDecaySettings(): Promise<DecaySettings> {
-  return fetchAPI("/decay/settings");
+  return cachedFetch<DecaySettings>("/decay/settings", 300_000);
 }
 
 export async function updateDecaySettings(settings: DecaySettings): Promise<void> {
@@ -143,10 +153,11 @@ export async function updateDecaySettings(settings: DecaySettings): Promise<void
     method: "PUT",
     body: JSON.stringify(settings),
   });
+  invalidateCache("/decay/settings");
 }
 
 export async function getSources(): Promise<Source[]> {
-  return fetchAPI("/sources");
+  return cachedFetch<Source[]>("/sources", 30_000);
 }
 
 export async function searchNodes(query: string): Promise<{ id: string; label: string; confidence: number; status: string }[]> {
@@ -161,9 +172,8 @@ export async function summarizeNode(nodeId: string, label: string, sourceProvena
 }
 
 export async function resetDemoData(): Promise<void> {
-  await fetchAPI("/reset-demo", {
-    method: "POST",
-  });
+  await fetchAPI("/reset-demo", { method: "POST" });
+  invalidateCache("/reset-demo");
 }
 
 export interface CogneeActivityLog {
@@ -183,20 +193,24 @@ export interface AIConfig {
 }
 
 export async function getAIConfig(): Promise<AIConfig> {
-  return fetchAPI("/ai/config");
+  return cachedFetch<AIConfig>("/ai/config", 300_000);
 }
 
 export async function saveAIConfig(provider: string, apiKey: string, model: string): Promise<{ status: string }> {
-  return fetchAPI("/ai/config", {
+  const result = await fetchAPI<{ status: string }>("/ai/config", {
     method: "POST",
     body: JSON.stringify({ provider, apiKey, model }),
   });
+  invalidateCache("/ai/config");
+  return result;
 }
 
 export async function deleteAIConfig(): Promise<{ status: string }> {
-  return fetchAPI("/ai/config", {
+  const result = await fetchAPI<{ status: string }>("/ai/config", {
     method: "DELETE",
   });
+  invalidateCache("/ai/config");
+  return result;
 }
 
 export async function getAIModels(provider: string, key: string): Promise<{ models: string[] }> {
@@ -204,7 +218,7 @@ export async function getAIModels(provider: string, key: string): Promise<{ mode
 }
 
 export async function getSchemaInventory(): Promise<SchemaInventoryItem[]> {
-  return fetchAPI("/schema-inventory");
+  return cachedFetch<SchemaInventoryItem[]>("/schema-inventory", 60_000);
 }
 
 export async function getSessionHistory(sessionId: string = "default_session", lastN: number = 5): Promise<SessionEntry[]> {
@@ -244,5 +258,3 @@ export async function addSessionFeedback(
     body: JSON.stringify({ session_id: sessionId, qa_id: qaId, feedback_score: feedbackScore, feedback_text: feedbackText }),
   });
 }
-
-

@@ -1,11 +1,8 @@
 import type { Metadata } from "next";
-import { Inter, EB_Garamond, Geist } from "next/font/google";
+import { Inter, EB_Garamond } from "next/font/google";
 import Script from "next/script";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import "./globals.css";
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const inter = Inter({
   subsets: ["latin"],

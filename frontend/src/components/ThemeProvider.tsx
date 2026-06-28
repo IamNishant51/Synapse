@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 
 type Theme = "light" | "dark" | "system";
 type ResolvedTheme = "light" | "dark";
@@ -36,6 +36,16 @@ function applyTheme(theme: ResolvedTheme, attribute: string) {
   root.style.colorScheme = theme;
 }
 
+function getInitialTheme(storageKey: string, defaultTheme: Theme): Theme {
+  if (typeof window === "undefined") return defaultTheme;
+  try {
+    const stored = localStorage.getItem(storageKey) as Theme | null;
+    return stored || defaultTheme;
+  } catch {
+    return defaultTheme;
+  }
+}
+
 export default function ThemeProvider({
   children,
   defaultTheme = "system",
@@ -47,45 +57,28 @@ export default function ThemeProvider({
   storageKey?: string;
   attribute?: string;
 }) {
-  const [theme, setThemeState] = useState<Theme>(defaultTheme);
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
-    defaultTheme === "system" ? getSystemTheme() : defaultTheme
+  const [theme, setThemeState] = useState<Theme>(() =>
+    getInitialTheme(storageKey, defaultTheme)
   );
-  const [mounted, setMounted] = useState(false);
+  const [systemPref, setSystemPref] = useState<ResolvedTheme>(() =>
+    defaultTheme === "system" ? getSystemTheme() : "light"
+  );
 
-  const setTheme = useCallback(
-    (newTheme: Theme) => {
-      setThemeState(newTheme);
-      try {
-        localStorage.setItem(storageKey, newTheme);
-      } catch {}
-    },
-    [storageKey]
+  const resolvedTheme = useMemo<ResolvedTheme>(
+    () => (theme === "system" ? systemPref : theme),
+    [theme, systemPref]
   );
 
   useEffect(() => {
-    const stored = localStorage.getItem(storageKey) as Theme | null;
-    if (stored) setThemeState(stored);
-    setMounted(true);
-  }, [storageKey]);
+    applyTheme(resolvedTheme, attribute);
+  }, [resolvedTheme, attribute]);
 
   useEffect(() => {
-    const effective = theme === "system" ? getSystemTheme() : theme;
-    setResolvedTheme(effective);
-    if (mounted) applyTheme(effective, attribute);
-  }, [theme, mounted, attribute]);
-
-  useEffect(() => {
-    if (theme !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = () => {
-      const sys = getSystemTheme();
-      setResolvedTheme(sys);
-      applyTheme(sys, attribute);
-    };
+    const handler = () => setSystemPref(getSystemTheme());
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [theme, attribute]);
+  }, []);
 
   useEffect(() => {
     const handler = (e: StorageEvent) => {
@@ -96,6 +89,16 @@ export default function ThemeProvider({
     window.addEventListener("storage", handler);
     return () => window.removeEventListener("storage", handler);
   }, [storageKey]);
+
+  const setTheme = useCallback(
+    (newTheme: Theme) => {
+      setThemeState(newTheme);
+      try {
+        localStorage.setItem(storageKey, newTheme);
+      } catch {}
+    },
+    [storageKey]
+  );
 
   return (
     <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
