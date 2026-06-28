@@ -99,6 +99,29 @@ export interface DecaySettings {
   forgetThresholdDays: number;
 }
 
+export interface SchemaInventoryItem {
+  type: string;
+  count: number;
+  samples: string[];
+  sample_size: number;
+  relationships: { source: string; target: string; count: number }[];
+}
+
+export interface SessionEntry {
+  qa_id: string;
+  question: string;
+  answer: string;
+  time: string;
+  feedback_score: number | null;
+  feedback_text: string | null;
+}
+
+export interface GuidanceResult {
+  session_id: string;
+  status: string;
+  documents: string[];
+}
+
 export type IngestionStep = "fetching" | "extracting" | "remember" | "improve";
 
 export interface IngestionJob {

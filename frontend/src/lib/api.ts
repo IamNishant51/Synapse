@@ -6,6 +6,9 @@ import type {
   Source,
   IngestionJob,
   SourceType,
+  SchemaInventoryItem,
+  SessionEntry,
+  GuidanceResult,
 } from "./types";
 
 const API_BASE = "/api/proxy";
@@ -198,6 +201,48 @@ export async function deleteAIConfig(): Promise<{ status: string }> {
 
 export async function getAIModels(provider: string, key: string): Promise<{ models: string[] }> {
   return fetchAPI(`/ai/models?provider=${encodeURIComponent(provider)}&key=${encodeURIComponent(key)}`);
+}
+
+export async function getSchemaInventory(): Promise<SchemaInventoryItem[]> {
+  return fetchAPI("/schema-inventory");
+}
+
+export async function getSessionHistory(sessionId: string = "default_session", lastN: number = 5): Promise<SessionEntry[]> {
+  return fetchAPI("/session/history", {
+    method: "POST",
+    body: JSON.stringify({ session_id: sessionId, last_n: lastN }),
+  });
+}
+
+export async function distillSession(sessionId: string = "default_session"): Promise<GuidanceResult> {
+  return fetchAPI("/session/distill", {
+    method: "POST",
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+}
+
+export async function rememberChatTurn(
+  question: string,
+  answer: string,
+  context: string = "",
+  sessionId: string = "default_session",
+): Promise<void> {
+  await fetchAPI("/session/remember", {
+    method: "POST",
+    body: JSON.stringify({ session_id: sessionId, question, answer, context }),
+  });
+}
+
+export async function addSessionFeedback(
+  sessionId: string,
+  qaId: string,
+  feedbackScore?: number,
+  feedbackText?: string,
+): Promise<void> {
+  await fetchAPI("/session/feedback", {
+    method: "POST",
+    body: JSON.stringify({ session_id: sessionId, qa_id: qaId, feedback_score: feedbackScore, feedback_text: feedbackText }),
+  });
 }
 
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
-import { answerQuery } from "@/lib/api";
+import { answerQuery, rememberChatTurn } from "@/lib/api";
 import type { ChatMessage } from "@/lib/types";
 
 export interface ConversationMeta {
@@ -248,6 +248,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const response = await answerQuery(q, controller.signal);
       if (epoch !== epochRef.current) return;
       handleSaveConversation(response);
+      rememberChatTurn(q, response.answer, JSON.stringify(response.sources), activeConvId || undefined).catch(() => {});
     } catch (e) {
       if ((e as Error)?.name === "AbortError") return;
       if (epoch !== epochRef.current) return;

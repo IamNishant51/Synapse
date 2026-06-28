@@ -8,7 +8,7 @@ import Link from "next/link";
 import EmptyState from "@/components/EmptyState";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { getConfidenceColor, tokens } from "@/lib/design-tokens";
-import { getGraphSnapshot, forgetNode, getConflictEvents, resetDemoData, summarizeNode } from "@/lib/api";
+import { getGraphSnapshot, forgetNode, getConflictEvents, resetDemoData, summarizeNode, getSchemaInventory } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useAIConfig } from "@/context/AIConfigContext";
 import * as THREE from "three";
@@ -230,6 +230,8 @@ export default function GraphPage() {
   const [loading, setLoading] = useState(true);
   const [summarizing, setSummarizing] = useState(false);
   const [isBannerDismissed, setIsBannerDismissed] = useState(true);
+  const [filterType, setFilterType] = useState<string>("all");
+  const [entityTypes, setEntityTypes] = useState<string[]>([]);
   const summaryCacheRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
@@ -328,13 +330,16 @@ export default function GraphPage() {
   const fetchGraphData = useCallback(async () => {
     setLoading(true);
     try {
-      const [data, events] = await Promise.all([
+      const [data, events, schema] = await Promise.all([
         getGraphSnapshot(),
         getConflictEvents(),
+        getSchemaInventory().catch(() => []),
       ]);
       setNodes(data.nodes);
       setEdges(data.edges);
       setConflictCount(events.filter((e) => e.status === "pending").length);
+      const types = schema.map((s: { type: string }) => s.type).filter(Boolean);
+      setEntityTypes(types);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load graph");
@@ -618,13 +623,22 @@ export default function GraphPage() {
     return new THREE.Line(geo, mat);
   }, []);
 
-  const graphData = useMemo(
-    () => ({
-      nodes: nodes.map((n) => ({ ...n, id: n.id, label: n.label })),
-      links: edges.map((e) => ({ source: e.source, target: e.target, confidence: e.confidence })),
-    }),
-    [nodes, edges],
-  );
+  const extractType = (label: string): string | null => {
+    const match = label.match(/\(([^)]+)\)$/);
+    return match ? match[1] : null;
+  };
+
+  const graphData = useMemo(() => {
+    let filteredNodes = nodes;
+    if (filterType !== "all") {
+      filteredNodes = nodes.filter((n) => extractType(n.label) === filterType);
+    }
+    const filteredIds = new Set(filteredNodes.map((n) => n.id));
+    return {
+      nodes: filteredNodes.map((n) => ({ ...n, id: n.id, label: n.label })),
+      links: edges.filter((e) => filteredIds.has(e.source) && filteredIds.has(e.target)).map((e) => ({ source: e.source, target: e.target, confidence: e.confidence })),
+    };
+  }, [nodes, edges, filterType]);
 
   const empty = !loading && nodes.length === 0 && !error;
 
@@ -805,6 +819,18 @@ export default function GraphPage() {
                   <span className="w-2.5 h-2.5 rounded-full bg-confidence-stale" />
                   <span className="text-xs text-body font-medium">Stale</span>
                 </div>
+                {entityTypes.length > 0 && (
+                  <select
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    className="text-[10px] uppercase tracking-wider text-body font-bold bg-surface-strong/60 border border-hairline rounded-md px-2 py-1 outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="all">All Types</option>
+                    {entityTypes.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                )}
                 <div className="hidden sm:block w-px h-3 bg-hairline mx-1" />
                 <button
                   onClick={() => setUse2d(!use2d)}

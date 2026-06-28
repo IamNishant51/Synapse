@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getDecaySettings, updateDecaySettings, runDecayCheck, getSources, searchNodes, forgetSource, forgetNode } from "@/lib/api";
-import type { Source } from "@/lib/types";
+import { getDecaySettings, updateDecaySettings, runDecayCheck, getSources, searchNodes, forgetSource, forgetNode, getSchemaInventory, distillSession } from "@/lib/api";
+import type { Source, SchemaInventoryItem, GuidanceResult } from "@/lib/types";
 import { useIngestion } from "@/context/IngestionContext";
 import { useToast } from "@/context/ToastContext";
 import { useAIConfig } from "@/context/AIConfigContext";
@@ -37,6 +37,10 @@ export default function SettingsPage() {
   const [selectedNodeIds, setSelectedNodeIds] = useState<Set<string>>(new Set());
   const [decayResult, setDecayResult] = useState<{ forgotten: number; decayed: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [schemaInventory, setSchemaInventory] = useState<SchemaInventoryItem[] | null>(null);
+  const [schemaLoading, setSchemaLoading] = useState(false);
+  const [guidance, setGuidance] = useState<GuidanceResult | null>(null);
+  const [guidanceLoading, setGuidanceLoading] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -355,7 +359,129 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* 3. Ingested Sources */}
+        {/* 3. Memory Insights */}
+        <section className="mb-10">
+          <div className="caption-upper text-muted mb-3.5">Memory Insights</div>
+          <div className="p-4 sm:p-6 md:p-8 rounded-2xl bg-surface-card border border-hairline shadow-[0_4px_16px_rgba(0,0,0,0.02)] space-y-6">
+            {/* Visualize Memory Provenance */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-body-strong">Memory Provenance</h3>
+                <p className="text-xs text-muted-soft mt-1 leading-relaxed max-w-lg">
+                  Generate a self-contained HTML visualization of your memory graph&apos;s full ownership and data-flow story — where every memory came from, who created it, and how it is connected.
+                </p>
+              </div>
+              <a
+                href="/api/proxy/provenance"
+                target="_blank"
+                rel="noreferrer"
+                className="px-5 py-2.5 rounded-full bg-primary text-on-primary text-[14px] font-semibold hover:bg-primary-active active:scale-[0.98] transition-all duration-150 cursor-pointer shadow-sm whitespace-nowrap text-center"
+              >
+                View Provenance →
+              </a>
+            </div>
+
+            <div className="border-t border-hairline-soft" />
+
+            {/* Schema Inventory */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-body-strong">Schema Inventory</h3>
+                <p className="text-xs text-muted-soft mt-1 leading-relaxed max-w-lg">
+                  See the shape of your knowledge graph — how many entities of each type exist, with sample names and relationship counts.
+                </p>
+                {schemaInventory && (
+                  <div className="mt-4 space-y-2.5">
+                    {schemaInventory.map((item) => (
+                      <div key={item.type} className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-strong/30">
+                        <div>
+                          <span className="text-sm font-semibold text-ink">{item.type}</span>
+                          {item.samples.length > 0 && (
+                            <span className="text-xs text-muted-soft ml-2 font-mono">
+                              e.g. {item.samples.slice(0, 3).join(", ")}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-sm font-mono text-primary font-bold">{item.count}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={async () => {
+                  setSchemaLoading(true);
+                  try {
+                    const data = await getSchemaInventory();
+                    setSchemaInventory(data);
+                  } catch {
+                    setSchemaInventory([]);
+                  } finally {
+                    setSchemaLoading(false);
+                  }
+                }}
+                disabled={schemaLoading}
+                className="px-5 py-2.5 rounded-full bg-primary text-on-primary text-[14px] font-semibold hover:bg-primary-active active:scale-[0.98] transition-all duration-150 cursor-pointer disabled:opacity-50 shadow-sm whitespace-nowrap"
+              >
+                {schemaLoading ? "Loading…" : schemaInventory ? "Refresh" : "Load Schema"}
+              </button>
+            </div>
+
+            <div className="border-t border-hairline-soft" />
+
+            {/* Session Guidance */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-body-strong">Session Guidance</h3>
+                <p className="text-xs text-muted-soft mt-1 leading-relaxed max-w-lg">
+                  Distill accumulated learnings from your chat sessions — what Synapse has learned about how you like answers structured.
+                </p>
+                {guidance && (
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-muted bg-surface-strong px-2 py-0.5 rounded">Status: {guidance.status}</span>
+                    </div>
+                    {guidance.documents.length > 0 && (
+                      <div className="text-xs text-muted-soft space-y-1">
+                        <span className="font-semibold text-body-strong">Distilled documents:</span>
+                        <ul className="list-disc list-inside">
+                          {guidance.documents.map((d, i) => (
+                            <li key={i}>{d}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {guidance.documents.length === 0 && guidance.status !== "error" && (
+                      <p className="text-xs text-muted-soft">No accumulated guidance yet. Start chatting in /ask to build session context.</p>
+                    )}
+                    {guidance.status === "error" && (
+                      <p className="text-xs text-semantic-error">Failed to distill session. Ensure AI is configured.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={async () => {
+                  setGuidanceLoading(true);
+                  try {
+                    const result = await distillSession();
+                    setGuidance(result);
+                  } catch {
+                    setGuidance({ session_id: "", status: "error", documents: [] });
+                  } finally {
+                    setGuidanceLoading(false);
+                  }
+                }}
+                disabled={guidanceLoading}
+                className="px-5 py-2.5 rounded-full bg-primary text-on-primary text-[14px] font-semibold hover:bg-primary-active active:scale-[0.98] transition-all duration-150 cursor-pointer disabled:opacity-50 shadow-sm whitespace-nowrap"
+              >
+                {guidanceLoading ? "Distilling…" : guidance ? "Re-distill" : "Distill Session"}
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* 4. Ingested Sources */}
         <section className="mb-10">
           <div className="caption-upper text-muted mb-3.5">Ingested Sources</div>
           <div className="rounded-2xl bg-surface-card border border-hairline shadow-[0_4px_16px_rgba(0,0,0,0.02)] divide-y divide-hairline overflow-hidden">

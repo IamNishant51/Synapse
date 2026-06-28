@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -38,6 +39,12 @@ from services import (
     forget_source,
     reset_demo_data,
     get_cognee_activities,
+    get_memory_provenance_html,
+    get_schema_inventory_data,
+    get_session_history,
+    get_session_guidance,
+    remember_chat_turn,
+    add_session_feedback,
     apply_cognee_llm_config,
 )
 
@@ -192,6 +199,68 @@ async def reset_demo_endpoint():
 @app.get("/cognee/activity")
 async def cognee_activity_endpoint():
     return get_cognee_activities()
+
+
+@app.get("/provenance")
+async def memory_provenance():
+    html = await get_memory_provenance_html()
+    return HTMLResponse(content=html, media_type="text/html")
+
+
+@app.get("/schema-inventory")
+async def schema_inventory():
+    return await get_schema_inventory_data()
+
+
+class SessionQuery(BaseModel):
+    session_id: str = "default_session"
+    last_n: int | None = 5
+
+
+@app.post("/session/history")
+async def session_history(req: SessionQuery):
+    return await get_session_history(session_id=req.session_id, last_n=req.last_n)
+
+
+@app.post("/session/distill")
+async def session_distill(req: SessionQuery):
+    return await get_session_guidance(session_id=req.session_id)
+
+
+class FeedbackRequest(BaseModel):
+    session_id: str
+    qa_id: str
+    feedback_text: str | None = None
+    feedback_score: int | None = None
+
+
+class ChatTurnRequest(BaseModel):
+    session_id: str = "default_session"
+    question: str
+    answer: str
+    context: str = ""
+
+
+@app.post("/session/remember")
+async def session_remember(req: ChatTurnRequest):
+    ok = await remember_chat_turn(
+        session_id=req.session_id,
+        question=req.question,
+        answer=req.answer,
+        context=req.context,
+    )
+    return {"status": "ok" if ok else "error"}
+
+
+@app.post("/session/feedback")
+async def session_feedback(req: FeedbackRequest):
+    ok = await add_session_feedback(
+        session_id=req.session_id,
+        qa_id=req.qa_id,
+        feedback_text=req.feedback_text,
+        feedback_score=req.feedback_score,
+    )
+    return {"status": "ok" if ok else "error"}
 
 
 class AIConfigRequest(BaseModel):

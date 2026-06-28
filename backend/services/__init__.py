@@ -1483,6 +1483,113 @@ async def forget_source(source_id: str) -> None:
                 pass
 
 
+async def get_memory_provenance_html() -> str:
+    if not COGNEE_READY:
+        return "<html><body style='font-family:sans-serif;padding:2rem'><h2>Cognee Not Configured</h2><p>Set GEMINI_API_KEY or GROQ_API_KEY to generate provenance visualization.</p></body></html>"
+    apply_cognee_llm_config()
+    try:
+        html = await cognee.visualize_memory_provenance(include_memory=True)
+        log_cognee_activity("visualize_memory_provenance()", "Generated memory provenance HTML")
+        return html
+    except Exception as e:
+        log_cognee_activity("visualize_memory_provenance_error", str(e))
+        return f"<html><body style='font-family:sans-serif;padding:2rem'><h2>Provenance Error</h2><p>{e}</p></body></html>"
+
+
+async def get_schema_inventory_data() -> list[dict]:
+    if not COGNEE_READY:
+        return []
+    apply_cognee_llm_config()
+    try:
+        result = await cognee.get_schema_inventory(dataset=COGNEE_DATASET, samples_per_type=3)
+        log_cognee_activity("get_schema_inventory()", f"Retrieved {len(result)} entity types")
+        return result
+    except Exception as e:
+        log_cognee_activity("get_schema_inventory_error", str(e))
+        return []
+
+
+async def get_session_history(session_id: str = "default_session", last_n: int | None = 5) -> list[dict]:
+    if not COGNEE_READY:
+        return []
+    apply_cognee_llm_config()
+    try:
+        entries = await cognee.session.get_session(session_id=session_id, last_n=last_n)
+        return [
+            {
+                "qa_id": e.qa_id,
+                "question": e.question,
+                "answer": e.answer,
+                "time": e.time,
+                "feedback_score": e.feedback_score,
+                "feedback_text": e.feedback_text,
+            }
+            for e in entries
+        ]
+    except Exception as e:
+        log_cognee_activity("get_session_error", str(e))
+        return []
+
+
+async def get_session_guidance(session_id: str = "default_session") -> dict:
+    if not COGNEE_READY:
+        return {"goals": [], "rules": [], "preferences": [], "lessons_learned": []}
+    apply_cognee_llm_config()
+    try:
+        result = await cognee.session.distill_session(
+            session_id=session_id,
+            dataset=COGNEE_DATASET,
+        )
+        return {
+            "session_id": result.session_id,
+            "status": result.status,
+            "documents": result.documents,
+        }
+    except Exception as e:
+        log_cognee_activity("distill_session_error", str(e))
+        return {"session_id": session_id, "status": "error", "documents": []}
+
+
+async def add_session_feedback(session_id: str, qa_id: str, feedback_text: str | None = None, feedback_score: int | None = None) -> bool:
+    if not COGNEE_READY:
+        return False
+    apply_cognee_llm_config()
+    try:
+        return await cognee.session.add_feedback(
+            session_id=session_id,
+            qa_id=qa_id,
+            feedback_text=feedback_text,
+            feedback_score=feedback_score,
+        )
+    except Exception as e:
+        log_cognee_activity("add_feedback_error", str(e))
+        return False
+
+
+async def remember_chat_turn(session_id: str, question: str, answer: str, context: str = "") -> bool:
+    if not COGNEE_READY:
+        return False
+    apply_cognee_llm_config()
+    try:
+        import cognee.shared.utils as utils
+        from cognee.infrastructure.databases.cache import get_cache
+        cache = get_cache()
+        qa_entry = {
+            "time": datetime.now(timezone.utc).isoformat(),
+            "question": question,
+            "answer": answer,
+            "context": context,
+            "qa_id": str(uuid.uuid4()),
+        }
+        user_id = str(utils.get_or_create_user().id)
+        await cache.set(f"session:{user_id}:{session_id}:qa:{qa_entry['qa_id']}", qa_entry)
+        log_cognee_activity("session_remember", f"Stored chat turn in session '{session_id}'")
+        return True
+    except Exception as e:
+        log_cognee_activity("session_remember_error", str(e))
+        return False
+
+
 async def reset_demo_data() -> None:
     db_reseed()
 
