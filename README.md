@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-# Synapse: The Autonomous Memory Dashboard
+# The Autonomous Memory Dashboard
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/IamNishant51/Synapse-Ai/actions/workflows/ci.yml/badge.svg)](https://github.com/IamNishant51/Synapse-Ai/actions/workflows/ci.yml)
