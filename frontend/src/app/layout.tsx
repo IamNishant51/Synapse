@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, EB_Garamond, Geist } from "next/font/google";
+import Script from "next/script";
 import LayoutWrapper from "@/components/LayoutWrapper";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -62,9 +63,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <body className="h-full bg-canvas text-ink">
-        <script dangerouslySetInnerHTML={{
-          __html: `requestAnimationFrame(()=>document.documentElement.classList.add("theme-transition"))`
-        }} />
+        <Script id="theme-transition" strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `requestAnimationFrame(()=>document.documentElement.classList.add("theme-transition"))`
+          }}
+        />
         <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>

@@ -33,6 +33,14 @@ const nextConfig: NextConfig = {
         hostname: "ik.imagekit.io",
         pathname: "/9pfz6g8ri/**",
       },
+      {
+        protocol: "https",
+        hostname: "avatars.githubusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
     ],
   },
   turbopack: {

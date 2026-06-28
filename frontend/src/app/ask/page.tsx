@@ -358,10 +358,7 @@ export default function AskPage() {
   }, []);
 
   return (
-    <div className="h-full flex flex-col bg-canvas relative overflow-hidden selection:bg-gradient-sky/40">
-      {/* Soft atmospheric gradient orbs */}
-      <div className="absolute top-[-10%] right-[-10%] w-[450px] h-[450px] orb-sky opacity-20 blur-[110px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-15%] w-[400px] h-[400px] orb-peach opacity-20 blur-[100px] pointer-events-none" />
+    <div className="h-full flex flex-col bg-canvas relative overflow-hidden">
 
       <div className="shrink-0 px-3 sm:px-6 md:px-12 pt-3 pb-3 sm:pt-6 sm:pb-4 border-b border-hairline flex items-center justify-between bg-canvas/80 backdrop-blur-md relative z-20">
         <div>

@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { ThemeProvider } from "next-themes";
 import NavRail from "./NavRail";
 import { IngestionProvider } from "@/context/IngestionContext";
 import { ChatProvider } from "@/context/ChatContext";
@@ -10,11 +9,12 @@ import { AIConfigProvider } from "@/context/AIConfigContext";
 import AIConfigModal from "./AIConfigModal";
 import CogneeConsole from "./CogneeConsole";
 import SessionProvider from "./SessionProvider";
+import ThemeProvider from "./ThemeProvider";
 
 function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider attribute="class" defaultTheme="system">
       <IngestionProvider>
         <ChatProvider>
           <ToastProvider>

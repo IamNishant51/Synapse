@@ -4,10 +4,7 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-canvas text-ink flex items-center justify-center p-6 selection:bg-gradient-lavender/40 relative overflow-hidden">
-      {/* Soft atmospheric gradient orbs */}
-      <div className="absolute top-[-10%] right-[-10%] w-[450px] h-[450px] orb-lavender opacity-20 blur-[110px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-15%] w-[400px] h-[400px] orb-mint opacity-20 blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-canvas text-ink flex items-center justify-center p-6 relative overflow-hidden">
 
       <div className="max-w-md w-full text-center relative z-10 flex flex-col items-center gap-6">
         {/* Decorative 404 Badge */}

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useIngestion } from "@/context/IngestionContext";
 import { useAIConfig } from "@/context/AIConfigContext";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/ThemeProvider";
 import { useSession, signOut } from "next-auth/react";
 
 const navItems = [

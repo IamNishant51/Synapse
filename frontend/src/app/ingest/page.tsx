@@ -121,10 +121,7 @@ export default function IngestPage() {
   const isDisabled = jobStatus === "running" || jobStatus === "completed";
 
   return (
-    <div className="h-full overflow-y-auto scrollbar-thin relative bg-canvas selection:bg-gradient-peach/40">
-      {/* Soft atmospheric gradient orbs */}
-      <div className="absolute top-[-10%] right-[-10%] w-[450px] h-[450px] orb-mint opacity-20 blur-[110px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] left-[-15%] w-[400px] h-[400px] orb-peach opacity-20 blur-[100px] pointer-events-none" />
+    <div className="h-full overflow-y-auto overflow-x-hidden scrollbar-thin relative bg-canvas">
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 md:px-12 pt-6 md:pt-16 pb-24 relative z-10">
         <div className="mb-10">

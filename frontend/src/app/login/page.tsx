@@ -1,7 +1,7 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/ThemeProvider";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";

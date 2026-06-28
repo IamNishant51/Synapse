@@ -11,7 +11,7 @@ import { getConfidenceColor } from "@/lib/design-tokens";
 import { getGraphSnapshot, forgetNode, getConflictEvents, resetDemoData, summarizeNode, getSchemaInventory } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
 import { useAIConfig } from "@/context/AIConfigContext";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/ThemeProvider";
 import * as THREE from "three";
 import type { GraphNode, GraphEdge } from "@/lib/types";
 
@@ -230,6 +230,7 @@ function GraphLoadingSkeleton() {
 export default function GraphPage() {
   const router = useRouter();
   const { config, loading: loadingAI, openModal } = useAIConfig();
+  const { resolvedTheme } = useTheme();
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
@@ -650,7 +651,7 @@ export default function GraphPage() {
   const empty = !loading && nodes.length === 0 && !error;
 
   return (
-    <div className="h-full flex flex-col md:flex-row overflow-hidden relative bg-canvas selection:bg-gradient-mint/40">
+    <div className="h-full flex flex-col md:flex-row overflow-hidden relative bg-canvas">
       <div ref={containerRef} className="flex-1 relative h-full w-full min-w-0 min-h-0" onDoubleClick={handleBackgroundClick}>
         {loading && <GraphLoadingSkeleton />}
 

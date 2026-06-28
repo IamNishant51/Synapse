@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/ThemeProvider";
 import { useSession } from "next-auth/react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
