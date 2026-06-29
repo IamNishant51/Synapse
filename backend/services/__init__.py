@@ -1874,16 +1874,17 @@ async def import_chat_from_url(url: str, label: str | None = None) -> dict:
             ),
         }
 
-    # Ingest the extracted content
+    # Ingest the extracted content (fires background task, returns jobId)
     try:
         ingest_req = IngestRequest(
             type="conversation",
             content=content[:100_000],
             label=f"{display_label[:100]}",
         )
-        await ingest_source(ingest_req)
+        result = await ingest_source(ingest_req)
         return {
             "status": "ok",
+            "jobId": result.jobId,
             "imported": 1,
             "platform": platform,
             "content_preview": content[:200],

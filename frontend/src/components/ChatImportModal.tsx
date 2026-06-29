@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useIngestion } from "@/context/IngestionContext";
 
 interface ChatImportModalProps {
   open: boolean;
@@ -28,6 +29,7 @@ function detectPlatform(url: string): string {
 }
 
 export default function ChatImportModal({ open, onClose }: ChatImportModalProps) {
+  const { startSync } = useIngestion();
   const [url, setUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -54,6 +56,8 @@ export default function ChatImportModal({ open, onClose }: ChatImportModalProps)
       if (data.status === "ok") {
         setResult({ ok: true, message: `Conversation imported successfully` });
         setUrl("");
+        if (data.jobId) startSync(data.jobId);
+        onClose();
       } else {
         setResult({ ok: false, message: data.error || "Import failed" });
       }
