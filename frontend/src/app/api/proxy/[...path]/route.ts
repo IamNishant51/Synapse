@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 
 async function handleProxy(request: NextRequest, pathArray: string[]) {
   let backendUrl = process.env.COGNEE_API_URL || process.env.NEXT_PUBLIC_COGNEE_API_URL;
@@ -14,6 +15,12 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
 
   const headers = new Headers(request.headers);
   headers.delete("host");
+
+  // Thread session user ID to backend for per-user data routing
+  const session = await auth();
+  if (session?.user?.id) {
+    headers.set("X-User-Id", session.user.id);
+  }
 
   try {
     const requestBody = request.method !== "GET" && request.method !== "HEAD" 

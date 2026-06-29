@@ -1464,10 +1464,11 @@ async def generate_node_summary(node_id: str, label: str, source: str) -> str:
     if not HAS_LLM:
         return ""
     prompt = (
-        f"Generate a brief one-sentence summary for this knowledge graph node:\n\n"
-        f"Label: {label}\n"
-        f"Source: {source}\n\n"
-        f"Describe concisely what this node represents in the knowledge graph."
+        f"Infer what this knowledge graph node likely represents based on its name and origin:\n\n"
+        f"Name: {label}\n"
+        f"Origin: {source}\n\n"
+        f"Write ONE short sentence describing what this node contributes or means. "
+        f"DO NOT rephrase the name and origin literally. DO NOT start with 'This node represents'."
     )
     result = await call_llm(prompt, "You are a precise knowledge graph assistant.")
     return result.strip().strip('"').strip("'")
@@ -1602,18 +1603,16 @@ async def remember_chat_turn(session_id: str, question: str, answer: str, contex
         return False
     apply_cognee_llm_config()
     try:
-        import cognee.shared.utils as utils
-        from cognee.infrastructure.databases.cache import get_cache
-        cache = get_cache()
-        qa_entry = {
-            "time": datetime.now(timezone.utc).isoformat(),
-            "question": question,
-            "answer": answer,
-            "context": context,
-            "qa_id": str(uuid.uuid4()),
-        }
-        user_id = str(utils.get_or_create_user().id)
-        await cache.set(f"session:{user_id}:{session_id}:qa:{qa_entry['qa_id']}", qa_entry)
+        qa_entry = cognee.QAEntry(
+            question=question,
+            answer=answer,
+            context=context,
+        )
+        await cognee.remember(
+            data=qa_entry,
+            session_id=session_id,
+            dataset_name=COGNEE_DATASET,
+        )
         log_cognee_activity("session_remember", f"Stored chat turn in session '{session_id}'")
         return True
     except Exception as e:

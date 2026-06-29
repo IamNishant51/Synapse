@@ -311,6 +311,10 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
   body {
     @apply bg-canvas text-ink;
     font-family: 'Inter', sans-serif;

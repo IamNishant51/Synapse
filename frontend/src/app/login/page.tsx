@@ -2,41 +2,70 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { useTheme } from "@/components/ThemeProvider";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 export default function LoginPage() {
   const { theme } = useTheme();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState<"github" | "google" | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [entering, setEntering] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (session) router.replace("/graph");
-  }, [session, router]);
+    if (session && mounted) router.replace("/graph");
+  }, [session, mounted, router]);
 
   const handleSignIn = async (provider: "github" | "google") => {
     setLoading(provider);
-    await signIn(provider, { redirectTo: "/graph" });
+    setError(null);
+    try {
+      const result = await signIn(provider, { redirect: false });
+      if (result?.error) {
+        setError("Sign-in failed — please try again.");
+        setLoading(null);
+      } else if (result?.url) {
+        setEntering(true);
+        setTimeout(() => router.push("/graph"), 400);
+      }
+    } catch {
+      setError("Sign-in failed — please try again.");
+      setLoading(null);
+    }
   };
+
+  if (status === "loading" || (status === "authenticated" && !entering)) {
+    return (
+      <div className="relative min-h-screen w-full bg-[var(--color-canvas)] flex items-center justify-center overflow-hidden">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative w-10 h-10">
+            <span className="absolute inset-0 rounded-full border-2 border-[var(--color-hairline)]" />
+            <span className="absolute inset-0 rounded-full border-2 border-t-[var(--color-ink)] animate-spin" />
+          </div>
+          <p className="text-sm text-[var(--color-muted)]">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen w-full bg-[var(--color-canvas)] flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-[var(--color-gradient-peach)]/30 via-[var(--color-gradient-rose)]/20 to-transparent blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-[30rem] h-[30rem] rounded-full bg-gradient-to-tr from-[var(--color-gradient-sky)]/25 via-[var(--color-gradient-lavender)]/20 to-transparent blur-3xl" />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full bg-gradient-to-b from-[var(--color-gradient-mint)]/20 via-transparent to-transparent blur-3xl" />
+        <div className="orb-drift absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-[var(--color-gradient-peach)]/30 via-[var(--color-gradient-rose)]/20 to-transparent blur-3xl" style={{ animationDelay: "0s" }} />
+        <div className="orb-drift absolute -bottom-40 -left-40 w-[30rem] h-[30rem] rounded-full bg-gradient-to-tr from-[var(--color-gradient-sky)]/25 via-[var(--color-gradient-lavender)]/20 to-transparent blur-3xl" style={{ animationDelay: "-4s" }} />
+        <div className="orb-drift absolute top-1/3 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full bg-gradient-to-b from-[var(--color-gradient-mint)]/20 via-transparent to-transparent blur-3xl" style={{ animationDelay: "-8s" }} />
       </div>
 
-      <div className="relative z-10 w-full max-w-sm mx-auto px-6">
+      <div ref={cardRef} className="relative z-10 w-full max-w-sm mx-auto px-6 animate-fade-up">
         <div className="flex flex-col items-center text-center mb-10">
           <div className="relative mb-8">
             {mounted && (
@@ -60,11 +89,17 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-[var(--color-surface-card)] border border-[var(--color-hairline)] rounded-2xl p-6 shadow-[0_4px_24px_rgba(0,0,0,0.03)]">
+          {error && (
+            <div className="mb-4 px-4 py-3 rounded-xl bg-[var(--color-semantic-error)]/10 border border-[var(--color-semantic-error)]/20 text-sm text-[var(--color-semantic-error)] font-medium text-center">
+              {error}
+            </div>
+          )}
+
           <div className="flex flex-col gap-3">
             <button
               onClick={() => handleSignIn("github")}
               disabled={loading !== null}
-              className="group relative flex items-center justify-center gap-3 w-full px-5 py-3 rounded-xl border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] hover:bg-[var(--color-surface-strong)] hover:border-[var(--color-hairline-strong)] transition-all duration-200 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+              className="group relative flex items-center justify-center gap-3 w-full px-5 py-3 rounded-xl border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] hover:bg-[var(--color-surface-strong)] hover:border-[var(--color-hairline-strong)] hover:shadow-[0_0_0_1px_rgba(110,118,129,0.15)] transition-all duration-200 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
             >
               {loading === "github" ? (
                 <span className="relative w-4 h-4 border-2 border-[var(--color-ink)]/30 border-t-[var(--color-ink)] rounded-full animate-spin" />
@@ -79,7 +114,7 @@ export default function LoginPage() {
             <button
               onClick={() => handleSignIn("google")}
               disabled={loading !== null}
-              className="group relative flex items-center justify-center gap-3 w-full px-5 py-3 rounded-xl border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] hover:bg-[var(--color-surface-strong)] hover:border-[var(--color-hairline-strong)] transition-all duration-200 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+              className="group relative flex items-center justify-center gap-3 w-full px-5 py-3 rounded-xl border border-[var(--color-hairline)] bg-[var(--color-canvas)] text-[var(--color-ink)] hover:bg-[var(--color-surface-strong)] hover:border-[var(--color-hairline-strong)] hover:shadow-[0_0_0_1px_rgba(66,133,244,0.15)] transition-all duration-200 text-sm font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
             >
               {loading === "google" ? (
                 <span className="relative w-4 h-4 border-2 border-[var(--color-ink)]/30 border-t-[var(--color-ink)] rounded-full animate-spin" />
@@ -113,12 +148,58 @@ export default function LoginPage() {
             </svg>
             <span>Back to landing</span>
           </button>
+
+          <div className="relative mt-4 pt-4 border-t border-[var(--color-hairline)]">
+            <button
+              onClick={() => router.push("/graph")}
+              className="w-full px-5 py-2.5 rounded-xl border border-dashed border-[var(--color-hairline-soft)] text-[var(--color-muted-soft)] hover:text-[var(--color-muted)] hover:border-[var(--color-hairline)] transition-all duration-200 text-xs cursor-pointer"
+            >
+              View demo without signing in
+            </button>
+          </div>
         </div>
 
         <p className="mt-8 text-[11px] text-[var(--color-muted)] leading-relaxed text-center max-w-[260px] mx-auto">
-          By continuing, Synapse will access your profile info for authentication.
+          By continuing, Synapse will access your{" "}
+          <span
+            className="border-b border-dotted border-[var(--color-hairline-strong)] cursor-help"
+            title="Your name, email, and avatar URL — standard OAuth scopes, nothing more."
+          >
+            profile info
+          </span>{" "}
+          for authentication.
         </p>
       </div>
+
+      {entering && (
+        <div className="fixed inset-0 z-50 bg-[var(--color-canvas)] animate-fade-in flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative w-10 h-10">
+              <span className="absolute inset-0 rounded-full border-2 border-[var(--color-hairline)]" />
+              <span className="absolute inset-0 rounded-full border-2 border-t-[var(--color-ink)] animate-spin" />
+            </div>
+            <p className="text-sm text-[var(--color-muted)]">Opening Synapse...</p>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fade-up {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up {
+          animation: fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @keyframes orb-drift {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(5%, -3%) scale(1.03); }
+          66% { transform: translate(-3%, 4%) scale(0.97); }
+        }
+        .orb-drift {
+          animation: orb-drift 12s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }

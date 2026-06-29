@@ -23,14 +23,14 @@ export default function NavRail() {
   const router = useRouter();
   const { jobStatus, progress } = useIngestion();
   const { config, openModal, loading: loadingAI } = useAIConfig();
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  const isDark = mounted && theme === "dark";
+  const isDark = mounted && resolvedTheme === "dark";
 
   return (
     <aside className="fixed bottom-0 md:top-0 left-0 z-40 flex w-full h-14 md:h-full md:w-56 flex-row md:flex-col bg-canvas border-t md:border-t-0 md:border-r border-hairline">
@@ -110,7 +110,7 @@ export default function NavRail() {
 
         {/* Theme Toggle */}
         <button
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-strong hover:bg-surface-strong/80 border border-hairline w-full text-muted hover:text-ink transition-colors cursor-pointer"
           title={mounted ? `Switch to ${isDark ? "light" : "dark"} mode` : "Toggle theme"}
         >
