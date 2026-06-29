@@ -2,11 +2,12 @@
 
 import { useState, useRef } from "react";
 import IngestionStepper from "@/components/IngestionStepper";
+import ChatImportModal from "@/components/ChatImportModal";
 import { ingestSource } from "@/lib/api";
 import type { SourceType } from "@/lib/types";
 import { useIngestion } from "@/context/IngestionContext";
 
-type Tab = "github" | "conversation" | "pdf" | "article" | "youtube";
+type Tab = "github" | "pdf" | "article" | "youtube";
 
 export default function IngestPage() {
   const { jobStatus, currentStep, progress, error, startSync, resetSync } = useIngestion();
@@ -14,26 +15,24 @@ export default function IngestPage() {
   const [activeTab, setActiveTab] = useState<Tab>("github");
   const [repoUrl, setRepoUrl] = useState("");
   const [pathFilter, setPathFilter] = useState("");
-  const [conversationText, setConversationText] = useState("");
-  const [sourceLabel, setSourceLabel] = useState("");
+
   const [pdfFiles, setPdfFiles] = useState<File[]>([]);
   const [articleUrl, setArticleUrl] = useState("");
   const [articleLabel, setArticleLabel] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [youtubeLabel, setYoutubeLabel] = useState("");
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectTab = (tabKey: Tab) => {
     setActiveTab(tabKey);
     setPathFilter("");
-    if (tabKey !== "conversation") setSourceLabel("");
     if (tabKey === "pdf") setPdfFiles([]);
   };
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "github", label: "GitHub" },
-    { key: "conversation", label: "Paste Conversation" },
     { key: "pdf", label: "Upload PDF" },
     { key: "article", label: "Article URL" },
     { key: "youtube", label: "YouTube URL" },
@@ -53,12 +52,6 @@ export default function IngestPage() {
         content = `Repository: ${repoUrl}\nPath filter: ${pathFilter || "all"}`;
         label = repoUrl.split("/").slice(-2).join("/");
         url = repoUrl;
-      } else if (activeTab === "conversation") {
-        if (!conversationText) return;
-        sourceType = "conversation";
-        content = conversationText;
-        label = sourceLabel || `Conversation ${new Date().toLocaleDateString()}`;
-        url = undefined;
       } else if (activeTab === "article") {
         if (!articleUrl) return;
         sourceType = "article";
@@ -99,8 +92,7 @@ export default function IngestPage() {
     setApiError(null);
     setRepoUrl("");
     setPathFilter("");
-    setConversationText("");
-    setSourceLabel("");
+
     setPdfFiles([]);
     setArticleUrl("");
     setArticleLabel("");
@@ -132,21 +124,33 @@ export default function IngestPage() {
           </p>
         </div>
 
-        <div className="flex flex-row flex-nowrap overflow-x-auto scrollbar-none gap-1.5 p-1 rounded-xl md:rounded-full bg-surface-strong w-full md:w-fit mb-8 border border-hairline">
-          {tabs.map((tab) => (
+        <div className="flex flex-row flex-nowrap overflow-x-auto scrollbar-none rounded-xl bg-surface-strong w-full mb-8 border border-hairline">
+          {tabs.map((tab, i) => (
             <button
               key={tab.key}
               onClick={() => { if (!isDisabled) selectTab(tab.key); }}
               disabled={isDisabled}
-              className={`px-5 py-2 rounded-lg md:rounded-full text-sm font-medium transition-all duration-150 cursor-pointer shrink-0 ${
+              className={`flex-1 px-3 py-2.5 text-sm font-medium transition-all duration-150 cursor-pointer text-center whitespace-nowrap ${
                 activeTab === tab.key
-                  ? "bg-surface-card text-ink shadow-[0_2px_8px_rgba(0,0,0,0.03)] border border-hairline"
+                  ? "bg-surface-card text-ink shadow-sm"
                   : "text-muted hover:text-ink"
-              }`}
+              } ${i === 0 ? "rounded-l-xl" : ""}`}
             >
               {tab.label}
             </button>
           ))}
+          <div className="w-px bg-hairline self-stretch" />
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="flex-1 px-3 py-2.5 text-sm font-medium transition-all duration-150 cursor-pointer text-center whitespace-nowrap text-muted hover:text-ink rounded-r-xl flex items-center justify-center gap-1.5"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Import
+          </button>
         </div>
 
         <div className="bg-surface-card border border-hairline rounded-2xl p-4 sm:p-6 md:p-8 shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-6">
@@ -179,33 +183,6 @@ export default function IngestPage() {
               ) : (
                 <p className="text-xs text-muted-soft">Last synced: never</p>
               )}
-            </div>
-          )}
-
-          {activeTab === "conversation" && (
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-body-strong mb-2">Source label</label>
-                <input
-                  type="text"
-                  value={sourceLabel}
-                  onChange={(e) => setSourceLabel(e.target.value)}
-                  placeholder="e.g. ChatGPT — March refactor discussion"
-                  disabled={isDisabled}
-                  className="w-full px-4 py-3 rounded-lg bg-surface-card border border-hairline-strong text-sm text-ink placeholder:text-muted-soft focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink/20 transition-all duration-200"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-body-strong mb-2">Paste conversation content</label>
-                <textarea
-                  value={conversationText}
-                  onChange={(e) => setConversationText(e.target.value)}
-                  placeholder="Paste a ChatGPT or Claude export, or any raw text..."
-                  rows={10}
-                  disabled={isDisabled}
-                  className="w-full px-4 py-3 rounded-lg bg-surface-card border border-hairline-strong text-sm text-ink placeholder:text-muted-soft focus:outline-none focus:border-ink focus:ring-1 focus:ring-ink/20 transition-all duration-200 resize-none font-mono"
-                />
-              </div>
             </div>
           )}
 
@@ -326,6 +303,8 @@ export default function IngestPage() {
           </div>
         )}
       </div>
+
+      <ChatImportModal open={showImportModal} onClose={() => setShowImportModal(false)} />
     </div>
   );
 }

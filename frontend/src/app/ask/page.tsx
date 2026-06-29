@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRef, useEffect, useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import SourcePill from "@/components/SourcePill";
-import ChatImportModal from "@/components/ChatImportModal";
 import { useChat } from "@/context/ChatContext";
 import { getAskTopics, getConflictEvents } from "@/lib/api";
 import type { DiffCard, TimelinePoint, ConnectionMap, ConflictEvent } from "@/lib/types";
@@ -293,7 +292,6 @@ export default function AskPage() {
   } = useChat();
   const { openModal, config, isModalOpen } = useAIConfig();
   
-  const [showImportModal, setShowImportModal] = useState(false);
   const [unresolvedConflicts, setUnresolvedConflicts] = useState<ConflictEvent[]>([]);
   const prevModalOpenRef = useRef(false);
 
@@ -382,17 +380,6 @@ export default function AskPage() {
           <h1 className="display-sm text-ink mt-0.5">Ask Synapse</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-surface-card border border-hairline-strong text-xs font-semibold text-body hover:text-ink hover:bg-surface-strong transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-sm"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            <span className="hidden sm:inline">Import</span>
-          </button>
           <div className="relative" ref={historyRef}>
             <button
               onClick={() => setShowHistory(v => !v)}
@@ -683,7 +670,6 @@ export default function AskPage() {
         </div>
       )}
 
-      <ChatImportModal open={showImportModal} onClose={() => setShowImportModal(false)} />
     </div>
   );
 }
