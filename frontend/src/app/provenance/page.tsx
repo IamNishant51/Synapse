@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useMemo } from "react";
-import Link from "next/link";
 import { useTheme } from "@/components/ThemeProvider";
 
 function stripHashSync(html: string): string {
@@ -79,16 +78,6 @@ export default function ProvenancePage() {
 
   return (
     <div className="relative w-full h-[calc(100vh-3.5rem)] md:h-screen bg-canvas">
-      <Link
-        href="/graph"
-        className="fixed top-4 left-[60px] md:left-[236px] z-50 flex items-center gap-2 px-3 py-1.5 rounded-full bg-canvas/80 backdrop-blur-md border border-hairline text-xs font-medium text-muted hover:text-ink shadow-sm hover:shadow transition-all"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12" />
-          <polyline points="12 19 5 12 12 5" />
-        </svg>
-        Back
-      </Link>
       <iframe
         ref={iframeRef}
         srcDoc={html}
