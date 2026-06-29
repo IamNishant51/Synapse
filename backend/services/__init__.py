@@ -962,15 +962,16 @@ def get_relevant_db_context(query: str, db_sources: list, db_conflicts: list) ->
             relevant_lines.append(f"- Source \"{s.label}\" ({s.type}, ingested {s.ingestedAt})")
             raw = db_get_source_content(s.label)
             if raw and len(raw.strip()) > 20:
-                snippet = raw.strip()[:600]
-                relevant_lines.append(f"  Content: {snippet}")
+                relevant_lines.append(f"  Content ({len(raw.strip())} chars):")
+                for i in range(0, len(raw.strip()), 4000):
+                    relevant_lines.append(f"  {raw.strip()[i:i+4000]}")
             
     if not relevant_lines:
         for s in db_sources[:3]:
             relevant_lines.append(f"- Source \"{s.label}\" ({s.type}, ingested {s.ingestedAt})")
             raw = db_get_source_content(s.label)
             if raw and len(raw.strip()) > 20:
-                snippet = raw.strip()[:600]
+                snippet = raw.strip()[:4000]
                 relevant_lines.append(f"  Content: {snippet}")
             
     return relevant_lines
@@ -1100,14 +1101,15 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
     if HAS_LLM:
         sys_prompt = (
             "You are Synapse, an AI knowledge-graph assistant. "
-            "Answer the user's question based ONLY on the provided knowledge graph context. "
-            "Be concise, specific, and refer to actual facts from the context. "
+            "Answer the user's question based ONLY on the provided knowledge graph context below. "
+            "When asked about a specific ingested source (e.g. a chat session), read its full Content: field and summarize the actual conversation — what topics were discussed, what decisions were made, what the key takeaways are. "
+            "Be specific — quote or paraphrase actual lines from the content. "
             "If the context doesn't contain enough information, say so honestly."
         )
         user_prompt = (
             f"{chr(10).join(graph_ctx_lines)}\n\n"
             f"User question: {req.query}\n\n"
-            f"Provide a natural, conversational answer. Reference specific sources and dates from the context."
+            f"Provide a natural, conversational answer. Reference specific sources, dates, and actual details from the content."
         )
         llm_answer = await call_llm(user_prompt, system_prompt=sys_prompt)
     else:
@@ -1155,9 +1157,9 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
             parts = []
             for s in matched_sources[:3]:
                 raw = db_get_source_content(s.label)
-                snippet = raw.strip()[:600] if raw else ""
+                snippet = raw.strip()[:4000] if raw else ""
                 if snippet:
-                    parts.append(f"**{s.label}**: {snippet}...")
+                    parts.append(f"**{s.label}**:\n{snippet}...")
             if parts:
                 answer = ("Based on your knowledge graph, here's what I found about this source:\n\n" +
                           "\n\n".join(parts) +
