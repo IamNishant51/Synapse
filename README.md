@@ -8,7 +8,7 @@
   <a href="https://github.com/topoteretes/cognee">
     <img src="https://raw.githubusercontent.com/topoteretes/cognee/refs/heads/dev/assets/cognee-logo-transparent.png" width="28" alt="Cognee" style="vertical-align:middle">
   </a>
-  &nbsp;Built on <a href="https://github.com/topoteretes/cognee">Cognee</a> for the WeMakeDevs × Cognee Hackathon
+<p align="center">Powered by Congee</p>
 </p>
 
 # The Autonomous Memory Dashboard
