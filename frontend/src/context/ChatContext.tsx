@@ -182,6 +182,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
   // Reset guidance dismissal when switching conversations
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setGuidanceDismissed(false);
     setGuidanceDocs([]);
   }, [activeConvId]);

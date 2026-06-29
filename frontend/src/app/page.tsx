@@ -109,7 +109,7 @@ const faqs = [
 
 export default function LandingPage() {
   const router = useRouter();
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const [entering, setEntering] = useState(false);

@@ -23,12 +23,15 @@ export default function NavRail() {
   const router = useRouter();
   const { jobStatus, progress } = useIngestion();
   const { config, openModal, loading: loadingAI } = useAIConfig();
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   const isDark = mounted && resolvedTheme === "dark";
 

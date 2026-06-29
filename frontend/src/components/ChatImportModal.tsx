@@ -110,7 +110,7 @@ export default function ChatImportModal({ open, onClose }: ChatImportModalProps)
           {!help && url && (
             <div className="px-4 py-3 rounded-xl bg-surface-strong border border-hairline">
               <p className="text-xs text-muted">
-                This link doesn't look like a ChatGPT, Gemini, or Claude URL. The importer will try to extract any conversation text found on the page.
+                This link doesn&apos;t look like a ChatGPT, Gemini, or Claude URL. The importer will try to extract any conversation text found on the page.
               </p>
             </div>
           )}
