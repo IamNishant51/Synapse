@@ -1787,26 +1787,73 @@ async def import_chat_from_url(url: str, label: str | None = None) -> dict:
     if not html or len(html) < 200:
         return {"status": "error", "error": "Page returned empty content"}
 
-    # Try trafilatura for clean text extraction
-    extracted = trafilatura.extract(html, include_comments=False, include_tables=False)
-    content = extracted.strip() if extracted else ""
+    content = ""
 
-    # Fallback: try to extract from script tags (SPA payloads)
+    # Try platform-specific extraction from __NEXT_DATA__ (SPA payloads)
+    script_matches = re.findall(
+        r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>',
+        html, re.DOTALL
+    )
+    next_payload = None
+    if script_matches:
+        try:
+            next_payload = json.loads(script_matches[0])
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    if platform == "claude" and next_payload:
+        conversation = (next_payload.get("props", {})
+                        .get("pageProps", {})
+                        .get("conversation", {}))
+        if conversation:
+            lines = []
+            name = conversation.get("name", "").strip()
+            if name:
+                lines.append(f"Conversation: {name}")
+            messages = conversation.get("messages", []) or conversation.get("chat_messages", [])
+            for msg in messages:
+                role = msg.get("role", "unknown").capitalize()
+                text = msg.get("content", "") or msg.get("text", "")
+                if isinstance(text, list):
+                    text = " ".join(
+                        p.get("text", "") for p in text if isinstance(p, dict) and p.get("type") == "text"
+                    )
+                if text:
+                    lines.append(f"\n{role}: {text.strip()}")
+            if lines:
+                content = "\n".join(lines)
+
+    if not content and platform == "chatgpt" and next_payload:
+        conversation = (next_payload.get("props", {})
+                        .get("pageProps", {})
+                        .get("conversation", {}))
+        if conversation:
+            lines = []
+            title = conversation.get("title", "").strip()
+            if title:
+                lines.append(f"Conversation: {title}")
+            for item in conversation.get("items", []):
+                role = item.get("role", "unknown").capitalize()
+                text = item.get("content", "") or item.get("text", "")
+                if text:
+                    lines.append(f"\n{role}: {text.strip()}")
+            if lines:
+                content = "\n".join(lines)
+
+    if not content and next_payload:
+        # Generic NEXT_DATA crawl: walk for any large text fields
+        try:
+            props = next_payload.get("props", {}).get("pageProps", {})
+            text = json.dumps(props, ensure_ascii=False)
+            if len(text) > 200:
+                content = text[:50_000]
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    # Try trafilatura for clean text extraction
     if not content or len(content) < 100:
-        script_matches = re.findall(
-            r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>',
-            html, re.DOTALL
-        )
-        if script_matches:
-            try:
-                payload = json.loads(script_matches[0])
-                props = payload.get("props", {}).get("pageProps", {})
-                text = json.dumps(props, ensure_ascii=False)
-                # Fall further back: crawl any large text field in the payload
-                if len(text) > 200:
-                    content = text[:50_000]
-            except (json.JSONDecodeError, TypeError):
-                pass
+        extracted = trafilatura.extract(html, include_comments=False, include_tables=False)
+        content = extracted.strip() if extracted else ""
 
     # Last fallback: just extract all visible text from HTML
     if not content or len(content) < 100:
