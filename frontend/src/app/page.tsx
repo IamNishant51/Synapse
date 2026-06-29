@@ -847,10 +847,10 @@ export default function LandingPage() {
                 </div>
 
                 <div className="flex items-center gap-3 justify-end">
-                  <button className="px-4 py-2 border border-[var(--color-hairline-strong)] text-xs font-medium rounded-full text-[var(--color-body)] bg-[var(--color-surface-card)] hover:text-black transition-colors select-none">
+                  <button className="px-4 py-2 border border-[var(--color-hairline-strong)] text-xs font-medium rounded-full text-[var(--color-body)] bg-[var(--color-surface-card)] hover:text-[var(--color-ink)] transition-colors select-none">
                     Keep Old
                   </button>
-                  <button id="btn-keep-new" className="px-5 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] text-xs font-medium rounded-full hover:bg-black transition-colors select-none">
+                  <button id="btn-keep-new" className="px-5 py-2 bg-[var(--color-primary)] text-[var(--color-on-primary)] text-xs font-medium rounded-full hover:bg-[var(--color-ink)] hover:text-[var(--color-canvas)] transition-colors select-none">
                     Keep New
                   </button>
                 </div>
@@ -1322,7 +1322,7 @@ export default function LandingPage() {
             Build a memory graph that reconciles, decays, and actively maintains itself.
           </p>
           <button onClick={enter}
-            className="px-8 py-4 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[15px] font-medium hover:bg-black transition-all duration-300 cursor-pointer w-full sm:w-auto text-center justify-center flex">
+            className="px-8 py-4 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[15px] font-medium hover:bg-[var(--color-ink)] hover:text-[var(--color-canvas)] transition-all duration-300 cursor-pointer w-full sm:w-auto text-center justify-center flex">
             Initialize graph →
           </button>
         </div>
