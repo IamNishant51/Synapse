@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRef, useEffect, useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import SourcePill from "@/components/SourcePill";
+import ChatImportModal from "@/components/ChatImportModal";
 import { useChat } from "@/context/ChatContext";
-import { getAskTopics } from "@/lib/api";
-import type { DiffCard, TimelinePoint, ConnectionMap } from "@/lib/types";
+import { getAskTopics, getConflictEvents } from "@/lib/api";
+import type { DiffCard, TimelinePoint, ConnectionMap, ConflictEvent } from "@/lib/types";
 import { useAIConfig } from "@/context/AIConfigContext";
 
 const fallbackPromptChips = [
@@ -284,9 +285,16 @@ export default function AskPage() {
     newConversation,
     switchToConversation,
     deleteConversation,
+    feedbackState,
+    setFeedback,
+    guidanceDocs,
+    guidanceDismissed,
+    dismissGuidance,
   } = useChat();
   const { openModal, config, isModalOpen } = useAIConfig();
   
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [unresolvedConflicts, setUnresolvedConflicts] = useState<ConflictEvent[]>([]);
   const prevModalOpenRef = useRef(false);
 
   useEffect(() => {
@@ -334,6 +342,14 @@ export default function AskPage() {
     return () => document.removeEventListener("mousedown", handler);
   }, [showHistory, setShowHistory]);
 
+  // Fetch unresolved conflicts for contradiction detection banner
+  useEffect(() => {
+    getConflictEvents().then((events) => {
+      const unresolved = events.filter((e) => e.status === "pending");
+      setUnresolvedConflicts(unresolved);
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -366,6 +382,17 @@ export default function AskPage() {
           <h1 className="display-sm text-ink mt-0.5">Ask Synapse</h1>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-surface-card border border-hairline-strong text-xs font-semibold text-body hover:text-ink hover:bg-surface-strong transition-all duration-150 cursor-pointer flex items-center gap-1.5 shadow-sm"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span className="hidden sm:inline">Import</span>
+          </button>
           <div className="relative" ref={historyRef}>
             <button
               onClick={() => setShowHistory(v => !v)}
@@ -520,6 +547,43 @@ export default function AskPage() {
                     ))}
                   </div>
                 )}
+                <div className="flex items-center justify-between pt-3 mt-1 border-t border-hairline/50">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => !msg.isError && setFeedback(msg.id, msg.qa_id, 1)}
+                        disabled={msg.isError || !msg.qa_id || feedbackState[msg.id] === "down"}
+                        className={`p-1.5 rounded-md transition-all duration-150 ${
+                          feedbackState[msg.id] === "up"
+                            ? "text-semantic-success bg-semantic-success/10"
+                            : "text-muted hover:text-ink hover:bg-surface-strong"
+                        } ${msg.isError || !msg.qa_id ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill={feedbackState[msg.id] === "up" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => !msg.isError && setFeedback(msg.id, msg.qa_id, -1)}
+                        disabled={msg.isError || !msg.qa_id || feedbackState[msg.id] === "up"}
+                        className={`p-1.5 rounded-md transition-all duration-150 ${
+                          feedbackState[msg.id] === "down"
+                            ? "text-semantic-error bg-semantic-error/10"
+                            : "text-muted hover:text-ink hover:bg-surface-strong"
+                        } ${msg.isError || !msg.qa_id ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill={feedbackState[msg.id] === "down" ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  {(msg.provider || msg.model) && !msg.isError && (
+                    <span className="text-[11px] text-muted-soft font-medium">
+                      via {msg.provider}{msg.model ? ` · ${msg.model}` : ""}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -543,8 +607,40 @@ export default function AskPage() {
         </div>
       </div>
 
-      <div className="shrink-0 px-3 sm:px-6 md:px-12 pt-3 pb-3 sm:py-5 border-t border-hairline bg-canvas/80 backdrop-blur-md relative z-20">
-        <div className="max-w-3xl mx-auto flex items-center gap-3">
+      <div className="shrink-0 px-3 sm:px-6 md:px-12 border-t border-hairline bg-canvas/80 backdrop-blur-md relative z-20">
+        {guidanceDocs.length > 0 && !guidanceDismissed && (
+          <div className="max-w-3xl mx-auto pt-2 pb-1">
+            <div className="flex items-start gap-2 px-4 py-2.5 rounded-xl bg-primary/[0.04] border border-primary/10">
+              <div className="shrink-0 mt-0.5">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold text-primary uppercase tracking-wider mb-1">Synapse has noticed…</p>
+                <ul className="space-y-0.5">
+                  {guidanceDocs.slice(0, 2).map((doc, i) => (
+                    <li key={i} className="text-xs text-muted leading-relaxed">• {doc}</li>
+                  ))}
+                  {guidanceDocs.length > 2 && (
+                    <li className="text-[10px] text-muted-soft font-medium">+{guidanceDocs.length - 2} more insights</li>
+                  )}
+                </ul>
+              </div>
+              <button
+                onClick={dismissGuidance}
+                className="shrink-0 p-1 rounded-md text-muted hover:text-ink hover:bg-surface-strong transition-all cursor-pointer"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="max-w-3xl mx-auto py-3 sm:py-5 flex items-center gap-3">
           <input
             type="text"
             value={input}
@@ -563,6 +659,31 @@ export default function AskPage() {
           </button>
         </div>
       </div>
+
+      {unresolvedConflicts.length > 0 && (
+        <div className="shrink-0 px-3 sm:px-6 md:px-12 pb-1">
+          <div className="max-w-3xl mx-auto">
+            <Link
+              href="/resolve"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-semantic-error/5 border border-semantic-error/15 hover:bg-semantic-error/10 transition-all group"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-semantic-error shrink-0">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span className="text-xs font-semibold text-ink">
+                {unresolvedConflicts.length} contradiction{unresolvedConflicts.length > 1 ? "s" : ""} detected across conversations
+              </span>
+              <span className="text-[11px] font-medium text-muted group-hover:text-ink ml-auto transition-colors">
+                Resolve → 
+              </span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <ChatImportModal open={showImportModal} onClose={() => setShowImportModal(false)} />
     </div>
   );
 }

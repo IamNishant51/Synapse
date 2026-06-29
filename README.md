@@ -4,6 +4,12 @@
     <img src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png" alt="Synapse" width="320" />
   </picture>
 </p>
+<p align="center">
+  <a href="https://github.com/topoteretes/cognee">
+    <img src="https://raw.githubusercontent.com/topoteretes/cognee/refs/heads/dev/assets/cognee-logo-transparent.png" width="28" alt="Cognee" style="vertical-align:middle">
+  </a>
+  &nbsp;Built on <a href="https://github.com/topoteretes/cognee">Cognee</a> for the WeMakeDevs × Cognee Hackathon
+</p>
 
 # The Autonomous Memory Dashboard
 

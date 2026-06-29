@@ -30,6 +30,7 @@ import time
 import base64
 import fnmatch
 import re
+import json
 import httpx
 import trafilatura
 from youtube_transcript_api import YouTubeTranscriptApi
@@ -1278,6 +1279,35 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
                     connections=connections[:4]
                 )
 
+    # Remember the chat turn in Cognee session memory and retrieve qa_id
+    qa_id_val: Optional[str] = None
+    provider_val: Optional[str] = None
+    model_val: Optional[str] = None
+    try:
+        await remember_chat_turn(
+            session_id="default_session",
+            question=req.query,
+            answer=answer,
+            context=json.dumps([s.label for s in sources_list]),
+        )
+        entries = await get_session_history(session_id="default_session", last_n=1)
+        if entries:
+            qa_id_val = entries[0].get("qa_id")
+        # Read current provider/model from config
+        config = db_get_user_ai_config()
+        if config:
+            provider_val = config.get("provider")
+            model_val = config.get("model", "").split("/")[-1] or config.get("model")
+        else:
+            if GEMINI_API_KEY:
+                provider_val = "gemini"
+                model_val = GEMINI_MODEL
+            elif GROQ_API_KEY:
+                provider_val = "groq"
+                model_val = GROQ_MODEL
+    except Exception:
+        pass
+
     return ChatMessage(
         id=msg_id, query=req.query, intent=intent,
         answer=answer,
@@ -1286,6 +1316,9 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
         timeline=timeline_list,
         connectionMap=connection_map,
         timestamp=datetime.now(timezone.utc).isoformat(),
+        qa_id=qa_id_val,
+        provider=provider_val,
+        model=model_val,
     )
 
 
@@ -1618,6 +1651,196 @@ async def remember_chat_turn(session_id: str, question: str, answer: str, contex
     except Exception as e:
         log_cognee_activity("session_remember_error", str(e))
         return False
+
+
+async def import_chat_export(file_content: str, label: str = "Imported Chat") -> dict:
+    """
+    Parse and ingest an exported AI chat file.
+    Supports ChatGPT format (conversations.json array) and Claude format (JSON with messages array).
+    """
+    imported_count = 0
+    errors: list[str] = []
+
+    try:
+        data = json.loads(file_content)
+    except json.JSONDecodeError as e:
+        return {"status": "error", "error": f"Invalid JSON: {e}", "imported": 0, "errors": [str(e)]}
+
+    conversations: list[dict] = []
+
+    if isinstance(data, list):
+        conversations = data
+    elif isinstance(data, dict):
+        if "conversations" in data:
+            conversations = data["conversations"]
+        elif "messages" in data:
+            # Single Claude-style conversation
+            conversations = [data]
+        else:
+            conversations = [data]
+
+    if not isinstance(conversations, list):
+        conversations = [conversations]
+
+    for i, conv in enumerate(conversations):
+        try:
+            title = conv.get("title", conv.get("name", f"{label} #{i + 1}"))
+            messages_list = conv.get("messages", conv.get("message", conv.get("chat_messages", [])))
+            if isinstance(messages_list, str):
+                messages_list = [messages_list]
+            if not isinstance(messages_list, list):
+                messages_list = [messages_list]
+
+            parts: list[str] = []
+            for msg in messages_list:
+                if isinstance(msg, dict):
+                    role = msg.get("role", msg.get("author", ""))
+                    content = msg.get("content", msg.get("parts", msg.get("text", "")))
+                    if isinstance(content, list):
+                        content = " ".join(str(c) for c in content if isinstance(c, str))
+                    if content:
+                        parts.append(f"[{role}]: {content}")
+                elif isinstance(msg, str):
+                    parts.append(msg)
+
+            if not parts:
+                # Try alternate format: conversation has a "text" field
+                text = conv.get("text", conv.get("content", ""))
+                if text:
+                    parts = [str(text)]
+
+            if parts:
+                content = "\n\n".join(parts)
+                ingest_req = IngestRequest(
+                    type="conversation",
+                    content=content,
+                    label=f"{title[:100]}",
+                )
+                await ingest_source(ingest_req)
+                imported_count += 1
+            else:
+                errors.append(f"Conversation #{i + 1}: no parseable messages")
+        except Exception as e:
+            errors.append(f"Conversation #{i + 1}: {e}")
+
+    return {
+        "status": "ok" if imported_count > 0 else "error",
+        "imported": imported_count,
+        "errors": errors[:5],
+        "total_found": len(conversations),
+    }
+
+
+def _detect_chat_platform(url: str) -> str:
+    url_lower = url.lower()
+    if "chatgpt.com" in url_lower or "chat.openai.com" in url_lower:
+        return "chatgpt"
+    if "gemini.google.com" in url_lower or "bard.google.com" in url_lower:
+        return "gemini"
+    if "claude.ai" in url_lower:
+        return "claude"
+    return "generic"
+
+
+async def import_chat_from_url(url: str, label: str | None = None) -> dict:
+    """
+    Fetch and ingest a conversation from a public AI chat URL.
+    Supports ChatGPT shared links, Gemini shared links, Claude shared links,
+    and any URL with conversation text.
+    """
+    platform = _detect_chat_platform(url)
+    display_label = label or f"{platform.title()} Chat"
+
+    # Use httpx to fetch the page with a browser-like User-Agent
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            resp = await client.get(url, headers=headers)
+            resp.raise_for_status()
+            html = resp.text
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code in (401, 403):
+            return {
+                "status": "error",
+                "error": (
+                    f"This {platform} conversation requires you to be signed in. "
+                    f"Please use the share feature in {platform.title()} to create a "
+                    f"public link, then paste that shared link instead."
+                ),
+            }
+        return {
+            "status": "error",
+            "error": f"Could not fetch URL: {e.response.status_code}",
+        }
+    except Exception as e:
+        return {"status": "error", "error": f"Failed to fetch URL: {e}"}
+
+    if not html or len(html) < 200:
+        return {"status": "error", "error": "Page returned empty content"}
+
+    # Try trafilatura for clean text extraction
+    extracted = trafilatura.extract(html, include_comments=False, include_tables=False)
+    content = extracted.strip() if extracted else ""
+
+    # Fallback: try to extract from script tags (SPA payloads)
+    if not content or len(content) < 100:
+        script_matches = re.findall(
+            r'<script[^>]*id="__NEXT_DATA__"[^>]*>(.*?)</script>',
+            html, re.DOTALL
+        )
+        if script_matches:
+            try:
+                payload = json.loads(script_matches[0])
+                props = payload.get("props", {}).get("pageProps", {})
+                text = json.dumps(props, ensure_ascii=False)
+                # Fall further back: crawl any large text field in the payload
+                if len(text) > 200:
+                    content = text[:50_000]
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+    # Last fallback: just extract all visible text from HTML
+    if not content or len(content) < 100:
+        cleaned = re.sub(r'<[^>]+>', ' ', html)
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        # Skip pages that are clearly just login/shell pages
+        login_indicators = ["sign in", "log in", "sign up", "log in to continue"]
+        if not any(ind in cleaned.lower()[:1000] for ind in login_indicators):
+            content = cleaned[:50_000]
+
+    if not content or len(content) < 100:
+        return {
+            "status": "error",
+            "error": (
+                "Could not extract conversation content from this URL. "
+                "The page might require authentication. "
+                f"Try sharing the conversation publicly from {platform.title()} and paste the shared link."
+            ),
+        }
+
+    # Ingest the extracted content
+    try:
+        ingest_req = IngestRequest(
+            type="conversation",
+            content=content[:100_000],
+            label=f"{display_label[:100]}",
+        )
+        await ingest_source(ingest_req)
+        return {
+            "status": "ok",
+            "imported": 1,
+            "platform": platform,
+            "content_preview": content[:200],
+        }
+    except Exception as e:
+        return {"status": "error", "error": f"Failed to ingest conversation: {e}"}
 
 
 async def reset_demo_data() -> None:

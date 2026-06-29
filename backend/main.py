@@ -7,7 +7,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from database import (
     db_save_user_ai_config,
     db_get_user_ai_config,
@@ -46,6 +46,8 @@ from services import (
     remember_chat_turn,
     add_session_feedback,
     apply_cognee_llm_config,
+    import_chat_export,
+    import_chat_from_url,
 )
 
 limiter = Limiter(key_func=get_remote_address)
@@ -103,6 +105,20 @@ async def health():
 async def ingest(request: Request, req: IngestRequest):
     result = await ingest_source(req)
     return result
+
+
+class ChatUrlImportRequest(BaseModel):
+    url: str = Field(..., max_length=2000)
+    label: str | None = None
+
+
+@app.post("/import/chat-url")
+async def import_chat_url_route(req: ChatUrlImportRequest):
+    try:
+        result = await import_chat_from_url(url=req.url, label=req.label)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/ingest/{job_id}")

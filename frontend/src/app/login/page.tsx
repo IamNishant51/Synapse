@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 export default function LoginPage() {
-  const { theme } = useTheme();
+  const { resolvedTheme } = useTheme();
   const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState<"github" | "google" | null>(null);
@@ -28,19 +28,8 @@ export default function LoginPage() {
   const handleSignIn = async (provider: "github" | "google") => {
     setLoading(provider);
     setError(null);
-    try {
-      const result = await signIn(provider, { redirect: false });
-      if (result?.error) {
-        setError("Sign-in failed — please try again.");
-        setLoading(null);
-      } else if (result?.url) {
-        setEntering(true);
-        setTimeout(() => router.push("/graph"), 400);
-      }
-    } catch {
-      setError("Sign-in failed — please try again.");
-      setLoading(null);
-    }
+    setEntering(true);
+    await signIn(provider, { callbackUrl: "/graph" });
   };
 
   if (status === "loading" || (status === "authenticated" && !entering)) {
@@ -70,7 +59,7 @@ export default function LoginPage() {
           <div className="relative mb-8">
             {mounted && (
               <Image
-                src={theme === "dark" ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
+                src={resolvedTheme === "dark" ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
                 alt="Synapse"
                 width={112}
                 height={32}

@@ -59,13 +59,31 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${inter.variable} ${garamond.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              var t;
+              try { t = localStorage.getItem('theme') } catch(e) {}
+              var d = document.documentElement;
+              if (t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                d.classList.add('dark');
+                d.style.colorScheme = 'dark';
+              } else {
+                d.classList.add('light');
+                d.style.colorScheme = 'light';
+              }
+            })();
+          `
+        }} />
+      </head>
       <body className="h-full bg-canvas text-ink">
+        <LayoutWrapper>{children}</LayoutWrapper>
         <Script id="theme-transition" strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `requestAnimationFrame(()=>document.documentElement.classList.add("theme-transition"))`
           }}
         />
-        <LayoutWrapper>{children}</LayoutWrapper>
       </body>
     </html>
   );

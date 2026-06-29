@@ -109,7 +109,7 @@ const faqs = [
 
 export default function LandingPage() {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const { data: session } = useSession();
   const [mounted, setMounted] = useState(false);
   const [entering, setEntering] = useState(false);
@@ -404,7 +404,7 @@ export default function LandingPage() {
         <div className="max-w-[1200px] mx-auto px-6 h-full flex items-center justify-between">
             <a href="#hero" onClick={(e) => handleNavClick(e, "#hero")} className="flex items-center gap-2 cursor-pointer" aria-label="Scroll to top">
             <Image
-              src={logoError ? "/images/synapse-logo.png" : !mounted ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : theme === "dark" ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
+              src={logoError ? "/images/synapse-logo.png" : !mounted ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : resolvedTheme === "dark" ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
               alt="Synapse Logo"
               width={100}
               height={28}
@@ -427,12 +427,12 @@ export default function LandingPage() {
             )}
             <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">GitHub</a>
             <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
               className="p-1.5 rounded-lg text-[var(--color-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-surface-strong)] transition-all duration-200 cursor-pointer"
-              title={mounted ? `Switch to ${theme === "dark" ? "light" : "dark"} mode` : "Switch theme"}
+              title={mounted ? `Switch to ${resolvedTheme === "dark" ? "light" : "dark"} mode` : "Switch theme"}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {mounted && theme === "dark" ? (
+                {mounted && resolvedTheme === "dark" ? (
                   <>
                     <circle cx="12" cy="12" r="5" />
                     <line x1="12" y1="1" x2="12" y2="3" />
@@ -444,7 +444,7 @@ export default function LandingPage() {
                     <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
                   </>
-                ) : mounted && theme !== "dark" ? (
+                ) : mounted && resolvedTheme !== "dark" ? (
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                 ) : null}
               </svg>
@@ -483,11 +483,11 @@ export default function LandingPage() {
             )}
             <a href="https://github.com/IamNishant51/Synapse-Ai" target="_blank" rel="noreferrer" onClick={() => setIsMobileMenuOpen(false)} className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors w-full py-1">GitHub</a>
             <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
               className="flex items-center gap-2 text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors w-full py-1 cursor-pointer"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {mounted && theme === "dark" ? (
+                {mounted && resolvedTheme === "dark" ? (
                   <>
                     <circle cx="12" cy="12" r="5" />
                     <line x1="12" y1="1" x2="12" y2="3" />
@@ -499,11 +499,11 @@ export default function LandingPage() {
                     <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
                   </>
-                ) : mounted && theme !== "dark" ? (
+                ) : mounted && resolvedTheme !== "dark" ? (
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                 ) : null}
               </svg>
-              <span>{mounted ? (theme === "dark" ? "Light mode" : "Dark mode") : ""}</span>
+              <span>{mounted ? (resolvedTheme === "dark" ? "Light mode" : "Dark mode") : ""}</span>
             </button>
             <a href="/settings" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors w-full py-1">Sign In</a>
             {session && (
@@ -1335,7 +1335,7 @@ export default function LandingPage() {
           {/* Column 1: Brand details */}
           <div className="col-span-2 flex flex-col items-start gap-4">
             <Image
-              src={logoError ? "/images/synapse-logo.png" : !mounted ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : theme === "dark" ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
+              src={logoError ? "/images/synapse-logo.png" : !mounted ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : resolvedTheme === "dark" ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
               alt="Synapse Logo"
               width={80}
               height={22}

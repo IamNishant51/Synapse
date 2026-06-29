@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from "react";
-import { answerQuery, rememberChatTurn } from "@/lib/api";
-import type { ChatMessage } from "@/lib/types";
+import { answerQuery, addSessionFeedback, distillSession } from "@/lib/api";
+import type { ChatMessage, GuidanceResult } from "@/lib/types";
 
 export interface ConversationMeta {
   id: string;
@@ -25,6 +25,11 @@ interface ChatContextType {
   newConversation: () => void;
   switchToConversation: (convId: string) => void;
   deleteConversation: (convId: string) => void;
+  feedbackState: Record<string, "up" | "down">;
+  setFeedback: (msgId: string, qaId: string | undefined, score: 1 | -1) => void;
+  guidanceDocs: string[];
+  guidanceDismissed: boolean;
+  dismissGuidance: () => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -78,6 +83,9 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [convIndex, setConvIndex] = useState<ConversationMeta[]>([]);
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   
+  const [feedbackState, setFeedbackState] = useState<Record<string, "up" | "down">>({});
+  const [guidanceDocs, setGuidanceDocs] = useState<string[]>([]);
+  const [guidanceDismissed, setGuidanceDismissed] = useState(false);
   const epochRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -139,6 +147,44 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       abortRef.current = null;
     };
   }, []);
+
+  const setFeedback = useCallback(async (msgId: string, qaId: string | undefined, score: 1 | -1) => {
+    if (!qaId) return;
+    setFeedbackState(prev => ({ ...prev, [msgId]: score === 1 ? "up" : "down" }));
+    try {
+      await addSessionFeedback("default_session", qaId, score);
+    } catch {
+      setFeedbackState(prev => {
+        const next = { ...prev };
+        delete next[msgId];
+        return next;
+      });
+    }
+  }, []);
+
+  const dismissGuidance = useCallback(() => {
+    setGuidanceDismissed(true);
+  }, []);
+
+  // Fetch session guidance after each completed answer
+  useEffect(() => {
+    if (messages.length > 0 && !isProcessing) {
+      const lastMsg = messages[messages.length - 1];
+      if (!lastMsg.isError) {
+        distillSession().then((result: GuidanceResult) => {
+          if (result?.documents?.length > 0) {
+            setGuidanceDocs(result.documents);
+          }
+        }).catch(() => {});
+      }
+    }
+  }, [messages.length, isProcessing]);
+
+  // Reset guidance dismissal when switching conversations
+  useEffect(() => {
+    setGuidanceDismissed(false);
+    setGuidanceDocs([]);
+  }, [activeConvId]);
 
   const newConversation = useCallback(() => {
     setMessages([]);
@@ -248,7 +294,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
       const response = await answerQuery(q, controller.signal);
       if (epoch !== epochRef.current) return;
       handleSaveConversation(response);
-      rememberChatTurn(q, response.answer, JSON.stringify(response.sources), activeConvId || undefined).catch(() => {});
     } catch (e) {
       if ((e as Error)?.name === "AbortError") return;
       if (epoch !== epochRef.current) return;
@@ -296,6 +341,11 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         newConversation,
         switchToConversation,
         deleteConversation,
+        feedbackState,
+        setFeedback,
+        guidanceDocs,
+        guidanceDismissed,
+        dismissGuidance,
       }}
     >
       {children}

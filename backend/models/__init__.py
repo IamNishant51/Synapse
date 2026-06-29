@@ -94,6 +94,9 @@ class ChatMessage(BaseModel):
     timeline: Optional[list[TimelinePoint]] = None
     connectionMap: Optional[ConnectionMap] = None
     timestamp: str
+    qa_id: Optional[str] = None
+    provider: Optional[str] = None
+    model: Optional[str] = None
 
 
 class ConflictEvent(BaseModel):

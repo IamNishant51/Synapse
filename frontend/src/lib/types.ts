@@ -92,6 +92,9 @@ export interface ChatMessage {
   connectionMap?: ConnectionMap | null;
   timestamp: string;
   isError?: boolean;
+  qa_id?: string;
+  provider?: string;
+  model?: string;
 }
 
 export interface DecaySettings {
