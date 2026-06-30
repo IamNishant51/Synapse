@@ -557,7 +557,7 @@ export default function LandingPage() {
               Memory that knows when it&apos;s wrong.
             </h1>
 
-            <p className="fade-up text-[var(--color-body)] text-sm md:text-base leading-relaxed max-w-xl mb-10 tracking-[0.16px]">
+            <p className="fade-up text-[var(--color-body)] text-sm md:text-base leading-relaxed max-w-xl mb-6 tracking-[0.16px]">
               Ingest scattered notes from ChatGPT, GitHub, PDFs, and more. Synapse actively reconciles conflicting facts, prunes unreinforced paths, and structures your personal knowledge graph.
             </p>
 
@@ -574,14 +574,62 @@ export default function LandingPage() {
           </div>
 
           {/* Editorial Layout Asymmetric Right Column */}
-          <div className="fade-up md:col-span-5 hidden md:flex flex-col items-end text-right border-l border-[var(--color-hairline)] pl-10 py-8 gap-8 relative z-10 self-center">
-            <SparkleIcon className="w-8 h-8 text-[var(--color-primary)]/20 mr-2" />
-            <div className="space-y-2">
-              <div className="text-[11px] font-mono tracking-widest text-[var(--color-muted)] uppercase">STRUCTURED METADATA</div>
-              <div className="font-serif text-2xl text-[var(--color-body-strong)] italic leading-tight">reconcile()<br />forget()<br />remember()</div>
+          <div className="fade-up md:col-span-5 hidden md:flex flex-col items-end text-right border-l border-[var(--color-hairline)] pl-10 py-8 gap-6 relative z-10 self-center">
+            <div className="text-[11px] font-mono tracking-widest text-[var(--color-muted)] uppercase">CONNECTED SOURCES</div>
+
+            <div className="relative w-full max-w-[240px] aspect-square">
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 240 240" fill="none" style={{ pointerEvents: "none" }}>
+                <line x1="120" y1="42" x2="120" y2="120" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" />
+                <line x1="36" y1="150" x2="120" y2="120" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" style={{ animationDelay: "0.4s" }} />
+                <line x1="204" y1="150" x2="120" y2="120" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" style={{ animationDelay: "0.8s" }} />
+                <line x1="120" y1="210" x2="120" y2="120" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" style={{ animationDelay: "1.2s" }} />
+              </svg>
+
+              <div className="grid grid-cols-3 grid-rows-3 w-full h-full">
+                <div />
+                <div className="flex flex-col items-center justify-start pt-1">
+                  <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
+                    <Image src="/images/gemini-icon.png" alt="Gemini" width={26} height={26} className="object-contain" />
+                  </div>
+                  <span className="text-[10px] font-medium text-[var(--color-muted)] mt-1">Gemini</span>
+                </div>
+                <div />
+
+                <div className="flex flex-col items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
+                    <Image src="/images/chat-gpt-icon.png" alt="ChatGPT" width={26} height={26} className="object-contain" />
+                  </div>
+                  <span className="text-[10px] font-medium text-[var(--color-muted)] mt-1">ChatGPT</span>
+                </div>
+                <div className="flex items-center justify-center">
+                  <div className="relative">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-primary)]/40" />
+                    <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-[var(--color-primary)]/20 animate-ping" style={{ animationDuration: "3s" }} />
+                  </div>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
+                    <Image src="/images/claude-icon.png" alt="Claude" width={26} height={26} className="object-contain" />
+                  </div>
+                  <span className="text-[10px] font-medium text-[var(--color-muted)] mt-1">Claude</span>
+                </div>
+
+                <div />
+                <div className="flex flex-col items-center justify-end pb-1">
+                  <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
+                    <Image src="/images/congee-icon.png" alt="Cognee" width={26} height={26} className="object-contain" />
+                  </div>
+                  <span className="text-[10px] font-medium text-[var(--color-muted)] mt-1">Cognee</span>
+                </div>
+                <div />
+              </div>
             </div>
-            <div className="text-xs text-[var(--color-muted)] leading-relaxed max-w-[200px]">
-              Built as a real-time memory dashboard on top of Cognee&apos;s semantic engine.
+
+            <div className="flex flex-wrap gap-1.5 justify-end max-w-[200px]">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-surface-strong)] text-[var(--color-muted)]">GitHub</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-surface-strong)] text-[var(--color-muted)]">PDFs</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-surface-strong)] text-[var(--color-muted)]">Articles</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-surface-strong)] text-[var(--color-muted)]">YouTube</span>
             </div>
           </div>
 

@@ -190,6 +190,15 @@
   66% { transform: translate(-3%, 4%) scale(0.97); }
 }
 
+.source-line {
+  stroke-dashoffset: 0;
+  animation: dash-flow 2s linear infinite;
+}
+
+@keyframes dash-flow {
+  to { stroke-dashoffset: -14; }
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
