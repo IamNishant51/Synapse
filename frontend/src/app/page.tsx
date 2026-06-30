@@ -588,7 +588,7 @@ export default function LandingPage() {
               <div className="absolute" style={{ left: "100px", top: "16px" }}>
                 <div className="flex flex-col items-center gap-1 source-float" style={{ animationDelay: "0s" }}>
                   <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
-                    <Image src="/images/gemini-icon.png" alt="Gemini" width={26} height={26} className="object-contain" />
+                    <Image src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/gemini-icon.png" alt="Gemini" width={26} height={26} className="object-contain" />
                   </div>
                   <span className="text-[10px] font-medium text-[var(--color-muted)]">Gemini</span>
                 </div>
@@ -597,7 +597,7 @@ export default function LandingPage() {
               <div className="absolute" style={{ left: "28px", top: "148px" }}>
                 <div className="flex flex-col items-center gap-1 source-float" style={{ animationDelay: "0.6s" }}>
                   <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
-                    <Image src="/images/chat-gpt-icon.png" alt="ChatGPT" width={26} height={26} className="object-contain" />
+                    <Image src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/chat-gpt-icon.png" alt="ChatGPT" width={26} height={26} className="object-contain" />
                   </div>
                   <span className="text-[10px] font-medium text-[var(--color-muted)]">ChatGPT</span>
                 </div>
@@ -606,7 +606,7 @@ export default function LandingPage() {
               <div className="absolute" style={{ left: "172px", top: "148px" }}>
                 <div className="flex flex-col items-center gap-1 source-float" style={{ animationDelay: "1.2s" }}>
                   <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
-                    <Image src="/images/claude-icon.png" alt="Claude" width={26} height={26} className="object-contain" />
+                    <Image src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/claude-icon.png" alt="Claude" width={26} height={26} className="object-contain" />
                   </div>
                   <span className="text-[10px] font-medium text-[var(--color-muted)]">Claude</span>
                 </div>
@@ -618,7 +618,7 @@ export default function LandingPage() {
                   <div className="absolute -inset-2 rounded-full border border-[var(--color-primary)]/20 animate-ping" style={{ animationDuration: "2.5s", animationDelay: "0.8s" }} />
                   <div className="absolute -inset-6 rounded-full border border-[var(--color-primary)]/5 animate-ping" style={{ animationDuration: "3.5s", animationDelay: "1.5s" }} />
                   <div className="w-12 h-12 rounded-full bg-[var(--color-surface-card)] border-2 border-[var(--color-hairline)] flex items-center justify-center p-2.5 shadow-md relative z-10 cognee-breathe">
-                    <Image src="/images/congee-icon.png" alt="Cognee" width={32} height={32} className="object-contain" />
+                    <Image src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/congee-icon.png" alt="Cognee" width={32} height={32} className="object-contain" />
                   </div>
                   <span className="absolute -bottom-5 text-[10px] font-semibold text-[var(--color-primary)] whitespace-nowrap">Cognee</span>
                 </div>
