@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from slowapi import Limiter
@@ -51,18 +51,17 @@ from services import (
 
 limiter = Limiter(key_func=get_remote_address)
 
-# async def verify_llm_authorization(x_synapse_key: str = Header(None)):
-#     user_config = db_get_user_ai_config()
-#     if user_config and user_config.get("provider") and user_config.get("model"):
-#         return  # BYOK is configured, bypass access key checks
-#     secret = os.environ.get("SYNAPSE_ACCESS_KEY")
-#     is_dev = os.environ.get("ENVIRONMENT", "production") == "development"
-#     if not secret and not is_dev:
-#         raise HTTPException(status_code=500, detail="Server misconfigured: Access keys not configured")
-#     allowed_keys = {k for k in (secret,) if k}
-#     if x_synapse_key not in allowed_keys:
-#         raise HTTPException(status_code=403, detail="Access key required.")
-# Uncomment above and add Depends(verify_llm_authorization) to /ingest, /recall, /reconciliation/resolve to re-lock the app
+async def verify_llm_authorization(x_synapse_key: str = Header(None)):
+    user_config = db_get_user_ai_config()
+    if user_config and user_config.get("provider") and user_config.get("model"):
+        return  # BYOK is configured, bypass access key checks
+    secret = os.environ.get("SYNAPSE_ACCESS_KEY")
+    is_dev = os.environ.get("ENVIRONMENT", "production") == "development"
+    if not secret and not is_dev:
+        raise HTTPException(status_code=500, detail="Server misconfigured: Access keys not configured")
+    allowed_keys = {k for k in (secret,) if k}
+    if x_synapse_key not in allowed_keys:
+        raise HTTPException(status_code=403, detail="Access key required.")
 
 app = FastAPI(
     title="Synapse — Cognee Backend", 
@@ -101,7 +100,7 @@ async def health():
 
 @app.post("/ingest")
 @limiter.limit("10/minute")
-async def ingest(request: Request, req: IngestRequest):
+async def ingest(request: Request, req: IngestRequest, _auth=Depends(verify_llm_authorization)):
     result = await ingest_source(req)
     return result
 
@@ -112,7 +111,7 @@ class ChatUrlImportRequest(BaseModel):
 
 
 @app.post("/import/chat-url")
-async def import_chat_url_route(req: ChatUrlImportRequest):
+async def import_chat_url_route(req: ChatUrlImportRequest, _auth=Depends(verify_llm_authorization)):
     try:
         result = await import_chat_from_url(url=req.url, label=req.label)
         return result
@@ -147,7 +146,7 @@ async def node_summarize(req: NodeSummarizeRequest):
 
 @app.post("/recall")
 @limiter.limit("20/minute")
-async def recall(request: Request, req: RecallRequest):
+async def recall(request: Request, req: RecallRequest, _auth=Depends(verify_llm_authorization)):
     return await answer_query(req)
 
 
@@ -162,7 +161,7 @@ async def reconciliation_events():
 
 
 @app.post("/reconciliation/resolve")
-async def reconciliation_resolve(req: ResolveRequest):
+async def reconciliation_resolve(req: ResolveRequest, _auth=Depends(verify_llm_authorization)):
     await resolve_conflict(req)
     return {"status": "ok"}
 
