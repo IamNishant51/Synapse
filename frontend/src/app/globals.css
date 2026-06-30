@@ -199,6 +199,33 @@
   to { stroke-dashoffset: -14; }
 }
 
+.source-float {
+  animation: source-float 3s ease-in-out infinite;
+}
+
+@keyframes source-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.orbit-ring {
+  transform-origin: 120px 120px;
+  animation: orbit-rotate 12s linear infinite;
+}
+
+@keyframes orbit-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.cognee-breathe {
+  animation: cognee-breathe 4s ease-in-out infinite;
+}
+
+@keyframes cognee-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
 :root {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

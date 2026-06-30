@@ -575,53 +575,53 @@ export default function LandingPage() {
 
           {/* Editorial Layout Asymmetric Right Column */}
           <div className="fade-up md:col-span-5 hidden md:flex flex-col items-end text-right border-l border-[var(--color-hairline)] pl-10 py-8 gap-6 relative z-10 self-center">
-            <div className="text-[11px] font-mono tracking-widest text-[var(--color-muted)] uppercase">CONNECTED SOURCES</div>
+            <div className="text-[11px] font-mono tracking-widest text-[var(--color-muted)] uppercase">MEMORY ENGINE</div>
 
             <div className="relative w-full max-w-[240px] aspect-square">
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 240 240" fill="none" style={{ pointerEvents: "none" }}>
-                <line x1="120" y1="42" x2="120" y2="120" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" />
-                <line x1="36" y1="150" x2="120" y2="120" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" style={{ animationDelay: "0.4s" }} />
-                <line x1="204" y1="150" x2="120" y2="120" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" style={{ animationDelay: "0.8s" }} />
-                <line x1="120" y1="210" x2="120" y2="120" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" style={{ animationDelay: "1.2s" }} />
+                <circle cx="120" cy="120" r="80" stroke="var(--color-hairline)" strokeWidth="0.5" strokeDasharray="2 6" className="orbit-ring" />
+                <line x1="120" y1="116" x2="120" y2="48" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" />
+                <line x1="116" y1="120" x2="54" y2="166" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" style={{ animationDelay: "0.5s" }} />
+                <line x1="124" y1="120" x2="186" y2="166" stroke="var(--color-hairline-strong)" strokeWidth="1" strokeDasharray="3 4" className="source-line" style={{ animationDelay: "1s" }} />
               </svg>
 
-              <div className="grid grid-cols-3 grid-rows-3 w-full h-full">
-                <div />
-                <div className="flex flex-col items-center justify-start pt-1">
+              <div className="absolute" style={{ left: "100px", top: "16px" }}>
+                <div className="flex flex-col items-center gap-1 source-float" style={{ animationDelay: "0s" }}>
                   <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
                     <Image src="/images/gemini-icon.png" alt="Gemini" width={26} height={26} className="object-contain" />
                   </div>
-                  <span className="text-[10px] font-medium text-[var(--color-muted)] mt-1">Gemini</span>
+                  <span className="text-[10px] font-medium text-[var(--color-muted)]">Gemini</span>
                 </div>
-                <div />
+              </div>
 
-                <div className="flex flex-col items-center justify-center">
+              <div className="absolute" style={{ left: "28px", top: "148px" }}>
+                <div className="flex flex-col items-center gap-1 source-float" style={{ animationDelay: "0.6s" }}>
                   <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
                     <Image src="/images/chat-gpt-icon.png" alt="ChatGPT" width={26} height={26} className="object-contain" />
                   </div>
-                  <span className="text-[10px] font-medium text-[var(--color-muted)] mt-1">ChatGPT</span>
+                  <span className="text-[10px] font-medium text-[var(--color-muted)]">ChatGPT</span>
                 </div>
-                <div className="flex items-center justify-center">
-                  <div className="relative">
-                    <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-primary)]/40" />
-                    <div className="absolute inset-0 w-2.5 h-2.5 rounded-full bg-[var(--color-primary)]/20 animate-ping" style={{ animationDuration: "3s" }} />
-                  </div>
-                </div>
-                <div className="flex flex-col items-center justify-center">
+              </div>
+
+              <div className="absolute" style={{ left: "172px", top: "148px" }}>
+                <div className="flex flex-col items-center gap-1 source-float" style={{ animationDelay: "1.2s" }}>
                   <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
                     <Image src="/images/claude-icon.png" alt="Claude" width={26} height={26} className="object-contain" />
                   </div>
-                  <span className="text-[10px] font-medium text-[var(--color-muted)] mt-1">Claude</span>
+                  <span className="text-[10px] font-medium text-[var(--color-muted)]">Claude</span>
                 </div>
+              </div>
 
-                <div />
-                <div className="flex flex-col items-center justify-end pb-1">
-                  <div className="w-10 h-10 rounded-full bg-[var(--color-surface-card)] border border-[var(--color-hairline)] flex items-center justify-center p-2 shadow-sm">
-                    <Image src="/images/congee-icon.png" alt="Cognee" width={26} height={26} className="object-contain" />
+              <div className="absolute" style={{ left: "96px", top: "96px" }}>
+                <div className="relative w-12 h-12 flex items-center justify-center">
+                  <div className="absolute -inset-4 rounded-full border border-[var(--color-primary)]/10 animate-ping" style={{ animationDuration: "2.5s" }} />
+                  <div className="absolute -inset-2 rounded-full border border-[var(--color-primary)]/20 animate-ping" style={{ animationDuration: "2.5s", animationDelay: "0.8s" }} />
+                  <div className="absolute -inset-6 rounded-full border border-[var(--color-primary)]/5 animate-ping" style={{ animationDuration: "3.5s", animationDelay: "1.5s" }} />
+                  <div className="w-12 h-12 rounded-full bg-[var(--color-surface-card)] border-2 border-[var(--color-hairline)] flex items-center justify-center p-2.5 shadow-md relative z-10 cognee-breathe">
+                    <Image src="/images/congee-icon.png" alt="Cognee" width={32} height={32} className="object-contain" />
                   </div>
-                  <span className="text-[10px] font-medium text-[var(--color-muted)] mt-1">Cognee</span>
+                  <span className="absolute -bottom-5 text-[10px] font-semibold text-[var(--color-primary)] whitespace-nowrap">Cognee</span>
                 </div>
-                <div />
               </div>
             </div>
 
