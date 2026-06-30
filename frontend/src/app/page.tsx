@@ -121,8 +121,8 @@ export default function LandingPage() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
 
-  // Real live metrics fetched from SQLite (Part 3.2)
-  const [liveStats, setLiveStats] = useState({ sourcesCount: 5, entitiesCount: 47, conflictsCount: 3 });
+  // Real live metrics fetched from SQLite — null means "not yet loaded"
+  const [liveStats, setLiveStats] = useState<{ sourcesCount: number; entitiesCount: number; conflictsCount: number } | null>(null);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
     e.preventDefault();
@@ -177,15 +177,30 @@ export default function LandingPage() {
         }
 
         setLiveStats({
-          sourcesCount: sourcesCount || 5,
-          entitiesCount: entitiesCount || 47,
-          conflictsCount: conflictsCount || 3
+          sourcesCount: sourcesCount,
+          entitiesCount: entitiesCount,
+          conflictsCount: conflictsCount
         });
       } catch (err) {
         console.error("Failed to load live stats:", err);
       }
     }
     fetchStats();
+  }, []);
+
+  // Parallax cursor tracking on hero background orbs (Part 3)
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const { clientX, clientY } = e;
+      const xPos = (clientX / window.innerWidth - 0.5) * 30;
+      const yPos = (clientY / window.innerHeight - 0.5) * 30;
+      document.querySelectorAll<HTMLElement>('.hero-orb').forEach((orb) => {
+        orb.style.transform = `translate(${xPos}px, ${yPos}px)`;
+        orb.style.transition = 'transform 1.5s cubic-bezier(0.22, 1, 0.36, 1)';
+      });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
   useEffect(() => {
@@ -596,24 +611,32 @@ export default function LandingPage() {
 
       {/* ═══════ 2 · HERO ═══════ */}
       <section id="hero" className="relative z-10 w-full min-h-screen flex items-center justify-center pt-28 pb-20 overflow-hidden">
+        {/* Atmospheric gradient orbs — restored per Part 3 */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0">
+          <div className="hero-orb absolute top-[5%] left-[15%] w-[420px] h-[420px] rounded-full opacity-[0.18] blur-[100px]" style={{ background: 'radial-gradient(circle, var(--color-gradient-mint) 0%, transparent 70%)' }} />
+          <div className="hero-orb absolute bottom-[10%] right-[10%] w-[500px] h-[500px] rounded-full opacity-[0.14] blur-[120px]" style={{ background: 'radial-gradient(circle, var(--color-gradient-lavender) 0%, transparent 70%)' }} />
+          <div className="hero-orb absolute top-[50%] left-[55%] w-[350px] h-[350px] rounded-full opacity-[0.10] blur-[90px]" style={{ background: 'radial-gradient(circle, var(--color-gradient-sky) 0%, transparent 70%)' }} />
+        </div>
 
         <div className="max-w-[1200px] mx-auto px-6 w-full grid grid-cols-1 md:grid-cols-12 gap-16 items-center relative z-10">
           
           <div className="flex flex-col items-center text-center md:items-start md:text-left md:col-span-5 relative z-10 w-full">
-            {/* Live Stats Pill (Part 3.2) - Glassmorphism */}
-            <div className="fade-up flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full bg-[var(--color-surface-strong)]/40 backdrop-blur-md border border-[var(--color-hairline)]/60 text-[11px] font-mono text-[var(--color-ink)] shadow-[0_4px_16px_rgba(0,0,0,0.04)] select-none">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-              <span className="font-semibold tracking-tight">LIVE CORE:</span>
-              <span className="text-[var(--color-muted)]">{liveStats.sourcesCount} sources</span>
-              <span className="text-[var(--color-hairline-strong)]">•</span>
-              <span className="text-[var(--color-muted)]">{liveStats.entitiesCount} entities</span>
-              {liveStats.conflictsCount > 0 && (
-                <>
-                  <span className="text-[var(--color-hairline-strong)]">•</span>
-                  <span className="text-[var(--color-semantic-error)] font-bold drop-shadow-sm">{liveStats.conflictsCount} conflicts</span>
-                </>
-              )}
-            </div>
+            {/* Live Stats Pill — only shown when real data has loaded; never fabricated */}
+            {liveStats && (liveStats.sourcesCount > 0 || liveStats.entitiesCount > 0) && (
+              <div className="fade-up flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full bg-[var(--color-surface-strong)]/40 backdrop-blur-md border border-[var(--color-hairline)]/60 text-[11px] font-mono text-[var(--color-ink)] shadow-[0_4px_16px_rgba(0,0,0,0.04)] select-none">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+                <span className="font-semibold tracking-tight">LIVE CORE:</span>
+                <span className="text-[var(--color-muted)]">{liveStats.sourcesCount} sources</span>
+                <span className="text-[var(--color-hairline-strong)]">•</span>
+                <span className="text-[var(--color-muted)]">{liveStats.entitiesCount} entities</span>
+                {liveStats.conflictsCount > 0 && (
+                  <>
+                    <span className="text-[var(--color-hairline-strong)]">•</span>
+                    <span className="text-[var(--color-semantic-error)] font-bold">{liveStats.conflictsCount} conflicts</span>
+                  </>
+                )}
+              </div>
+            )}
 
             <h1 className="fade-up display-xl text-[var(--color-ink)] mb-8 leading-[1.08] tracking-[-0.96px]">
               Memory that knows when it&apos;s wrong.
@@ -644,17 +667,27 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Hero Image */}
+          {/* Hero: Real product screenshot in browser frame — per Part 2 */}
           <div className="fade-up md:col-span-7 hidden md:block w-full relative z-10 self-center">
-            <Image
-              src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/Hero_image.png?tr=w-1200"
-              alt="Synapse Hero"
-              width={1200}
-              height={800}
-              className="w-full h-auto object-contain"
-              priority
-              unoptimized
-            />
+            <BrowserChrome url="localhost:3000/resolve" className="shadow-[0_8px_40px_rgba(0,0,0,0.06)]">
+              <Image
+                src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/resolve_screenshot.jpg"
+                alt="Synapse Resolve — conflict reconciliation screen"
+                width={1200}
+                height={675}
+                className="w-full h-auto object-cover"
+                priority
+                unoptimized
+              />
+            </BrowserChrome>
+            {/* Lived-in detail: a small badge overlay */}
+            <div className="absolute top-6 right-6 bg-[#fef08a] border border-[#eab308]/30 px-3 py-1 rounded-full shadow-sm flex items-center gap-1.5 z-20 select-none">
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6" stroke="#ca8a04" strokeWidth="1.5"/>
+                <path d="M8 5v3M8 10v.5" stroke="#ca8a04" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <span className="text-[10px] font-semibold text-[#92400e] tracking-wide">2 Conflicts Pending</span>
+            </div>
           </div>
 
         </div>
