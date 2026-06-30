@@ -4,12 +4,6 @@
     <img src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png" alt="Synapse" width="320" />
   </picture>
 </p>
-<p align="center">
-  <a href="https://github.com/topoteretes/cognee">
-    <img src="https://raw.githubusercontent.com/topoteretes/cognee/refs/heads/dev/assets/cognee-logo-transparent.png" width="28" alt="Cognee" style="vertical-align:middle">
-  </a>
-<p align="center">Powered by Congee</p>
-</p>
 
 # The Autonomous Memory Dashboard
 
@@ -113,10 +107,11 @@ Self-hosting users can connect their own accounts/keys for Groq, OpenAI, or Gemi
 
 ## 6. Known Limitations
 
-- **Authentication Model**: Authentication via GitHub/Google OAuth is enforced for all routes except the landing page and login page. A "View demo without signing in" link on the login page offers frictionless exploration for judges. The session user ID is threaded to the backend via the `X-User-Id` header for per-user data routing.
+- **Authentication Model**: Authentication via GitHub/Google OAuth is enforced for all routes except the landing page and login page. The session user ID is threaded to the backend via the `X-User-Id` header for per-user data routing.
 - **Chat History Persistence**: The chat conversation history in `/ask` is currently persisted in the browser's local storage (`localStorage`) rather than being stored on the server side.
 - **Database Scope**: The database configuration supports both a local SQLite file (default for local development) and a managed PostgreSQL instance with PGVector for remote Vercel/production deployment.
 - **Cognee Per-Request LLM Isolation (Upstream Issue #2228)**: LLM configuration for Cognee's own internal pipeline (`remember`/`recall`/`improve`/`forget`) is applied per-request but relies on Cognee's global process-wide config state. This is fully safe under this project's single-session usage pattern, but would require request-scoped isolation (or waiting on Cognee's roadmap for issue #2228) before being run under highly concurrent multi-tenant loads.
+- **AI Chat Import Depends on External Page Structure**: The chat-URL importer (`/import/chat-url`) scrapes undocumented page structure from ChatGPT, Claude, and Congee public share links. These platforms may change their page layout at any time with no notice, which can break import for a specific platform. This is not a Synapse bug — the feature works within the limits of what each platform's public share page exposes.
 
 ---
 

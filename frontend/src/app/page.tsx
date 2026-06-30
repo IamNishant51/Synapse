@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTheme } from "@/components/ThemeProvider";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -117,6 +117,7 @@ export default function LandingPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [logoError, setLogoError] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const lenisRef = useRef<Lenis | null>(null);
 
@@ -449,12 +450,33 @@ export default function LandingPage() {
                 ) : null}
               </svg>
             </button>
-            <a href="/settings" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">Sign In</a>
-            {session && (
-              <button onClick={enter}
-                className="px-5 py-2.5 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[15px] font-medium hover:bg-[var(--color-ink)] transition-all duration-300 cursor-pointer">
-                Open App
-              </button>
+            {session ? (
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <button onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="w-8 h-8 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[13px] font-semibold flex items-center justify-center hover:bg-[var(--color-primary)]/20 transition-colors cursor-pointer"
+                    title="Account">
+                    {session.user?.name?.charAt(0) || "U"}
+                  </button>
+                  {showUserMenu && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} />
+                      <div className="absolute right-0 top-full mt-2 z-50 w-36 py-1 rounded-xl border border-[var(--color-hairline)] bg-[var(--color-surface-card)] shadow-lg">
+                        <button onClick={() => { signOut(); setShowUserMenu(false); }}
+                          className="w-full px-4 py-2 text-left text-[13px] font-medium text-[var(--color-body)] hover:bg-[var(--color-surface-strong)] transition-colors cursor-pointer">
+                          Sign out
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <button onClick={enter}
+                  className="px-5 py-2.5 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[15px] font-medium hover:bg-[var(--color-ink)] transition-all duration-300 cursor-pointer">
+                  Open App
+                </button>
+              </div>
+            ) : (
+              <a href="/settings" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">Sign In</a>
             )}
           </div>
 
@@ -505,12 +527,22 @@ export default function LandingPage() {
               </svg>
               <span>{mounted ? (resolvedTheme === "dark" ? "Light mode" : "Dark mode") : ""}</span>
             </button>
-            <a href="/settings" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors w-full py-1">Sign In</a>
-            {session && (
-              <button onClick={enter}
-                className="w-full text-center px-5 py-2.5 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[15px] font-medium hover:bg-[var(--color-ink)] transition-all duration-300">
-                Open App
-              </button>
+            {session ? (
+              <div className="flex items-center justify-between w-full">
+                <button onClick={() => signOut()}
+                  className="flex items-center gap-2 text-[13px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors cursor-pointer">
+                  <span className="w-7 h-7 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[11px] font-semibold flex items-center justify-center">
+                    {session.user?.name?.charAt(0) || "U"}
+                  </span>
+                  Sign out
+                </button>
+                <button onClick={enter}
+                  className="px-4 py-2 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[14px] font-medium hover:bg-[var(--color-ink)] transition-all duration-300">
+                  Open App
+                </button>
+              </div>
+            ) : (
+              <a href="/settings" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors w-full py-1">Sign In</a>
             )}
           </div>
         )}

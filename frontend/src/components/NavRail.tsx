@@ -24,7 +24,7 @@ export default function NavRail() {
   const { jobStatus, progress } = useIngestion();
   const { config, openModal, loading: loadingAI } = useAIConfig();
   const { resolvedTheme, setTheme } = useTheme();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
@@ -51,7 +51,7 @@ export default function NavRail() {
       </div>
 
       {/* Nav links */}
-      {session ? (
+      {status === "authenticated" ? (
       <nav className="flex flex-row md:flex-col w-full md:w-auto h-full md:h-auto gap-0.5 px-1.5 md:px-3 justify-around md:justify-start items-center md:items-stretch py-1 md:py-0">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
@@ -82,6 +82,10 @@ export default function NavRail() {
           );
         })}
       </nav>
+      ) : status === "loading" ? (
+      <div className="flex flex-col items-center justify-center flex-1 px-4">
+        <span className="w-5 h-5 border-2 border-muted-soft border-t-ink rounded-full animate-spin" />
+      </div>
       ) : (
       <div className="flex flex-col items-center justify-center flex-1 px-4 text-center">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-soft mb-3">
@@ -175,7 +179,7 @@ export default function NavRail() {
         )}
 
         {/* User */}
-        {session?.user ? (
+        {status === "authenticated" && session?.user ? (
           <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-strong/40 border border-hairline-soft w-full">
             <div className="flex items-center gap-2 min-w-0">
               {session.user.image ? (

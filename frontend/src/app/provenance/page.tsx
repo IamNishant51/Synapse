@@ -1,52 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
-import { useTheme } from "@/components/ThemeProvider";
-
-function stripHashSync(html: string): string {
-  const start = html.indexOf("// ── URL hash sync");
-  if (start === -1) return html;
-  const end = html.indexOf("function row(", start);
-  if (end === -1) return html;
-  return html.slice(0, start) + html.slice(end);
-}
-
-function injectDarkStyles(html: string, isDark: boolean): string {
-  if (!isDark) return html;
-  const style = `<style>
-:root {
-  color-scheme: dark;
-  background-color: #0c0c0c !important;
-  filter: invert(1) hue-rotate(180deg);
-}
-img, video, iframe, canvas, svg, [style*="background-image"] {
-  filter: invert(1) hue-rotate(180deg);
-}
-</style>`;
-  return html.replace("</head>", style + "</head>");
-}
+import { useEffect, useRef, useState } from "react";
 
 export default function ProvenancePage() {
-  const { resolvedTheme } = useTheme();
-  const [rawHtml, setRawHtml] = useState<string | null>(null);
+  const [html, setHtml] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const isDark = resolvedTheme === "dark";
-
   useEffect(() => {
     fetch("/api/proxy/provenance")
       .then((r) => r.text())
-      .then(stripHashSync)
-      .then(setRawHtml)
+      .then((raw) => {
+        const start = raw.indexOf("// ── URL hash sync");
+        if (start !== -1) {
+          const end = raw.indexOf("function row(", start);
+          if (end !== -1) {
+            setHtml(raw.slice(0, start) + raw.slice(end));
+            return;
+          }
+        }
+        setHtml(raw);
+      })
       .catch((e) => setError(e.message));
   }, []);
-
-  const html = useMemo(
-    () => (rawHtml ? injectDarkStyles(rawHtml, isDark) : null),
-    [rawHtml, isDark]
-  );
 
   if (error) {
     return (

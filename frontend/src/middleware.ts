@@ -2,11 +2,10 @@ import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
 
 export default auth((req) => {
-  if (!req.auth && req.nextUrl.pathname !== "/login") {
-    if (req.nextUrl.searchParams.has("demo")) return
-    const loginUrl = new URL("/login", req.nextUrl.origin)
-    return NextResponse.redirect(loginUrl)
-  }
+    if (!req.auth && req.nextUrl.pathname !== "/login") {
+      const loginUrl = new URL("/login", req.nextUrl.origin)
+      return NextResponse.redirect(loginUrl)
+    }
 })
 
 export const config = {

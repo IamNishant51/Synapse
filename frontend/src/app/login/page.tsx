@@ -139,14 +139,6 @@ export default function LoginPage() {
             <span>Back to landing</span>
           </button>
 
-          <div className="relative mt-4 pt-4 border-t border-[var(--color-hairline)]">
-            <button
-              onClick={() => router.push("/graph?demo=1")}
-              className="w-full px-5 py-2.5 rounded-xl border border-dashed border-[var(--color-hairline-soft)] text-[var(--color-muted-soft)] hover:text-[var(--color-muted)] hover:border-[var(--color-hairline)] transition-all duration-200 text-xs cursor-pointer"
-            >
-              View demo without signing in
-            </button>
-          </div>
         </div>
 
         <p className="mt-8 text-[11px] text-[var(--color-muted)] leading-relaxed text-center max-w-[260px] mx-auto">
