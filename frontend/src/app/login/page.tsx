@@ -49,11 +49,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen w-full bg-[var(--color-canvas)] flex items-center justify-center overflow-hidden">
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="orb-drift absolute -top-32 -right-32 w-96 h-96 rounded-full bg-gradient-to-br from-[var(--color-gradient-peach)]/30 via-[var(--color-gradient-rose)]/20 to-transparent blur-3xl" style={{ animationDelay: "0s" }} />
-        <div className="orb-drift absolute -bottom-40 -left-40 w-[30rem] h-[30rem] rounded-full bg-gradient-to-tr from-[var(--color-gradient-sky)]/25 via-[var(--color-gradient-lavender)]/20 to-transparent blur-3xl" style={{ animationDelay: "-4s" }} />
-        <div className="orb-drift absolute top-1/3 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full bg-gradient-to-b from-[var(--color-gradient-mint)]/20 via-transparent to-transparent blur-3xl" style={{ animationDelay: "-8s" }} />
-      </div>
+      
 
       <div ref={cardRef} className="relative z-10 w-full max-w-sm mx-auto px-6 animate-fade-up">
         <div className="flex flex-col items-center text-center mb-10">
@@ -172,14 +168,6 @@ export default function LoginPage() {
         }
         .animate-fade-up {
           animation: fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
-        }
-        @keyframes orb-drift {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(5%, -3%) scale(1.03); }
-          66% { transform: translate(-3%, 4%) scale(0.97); }
-        }
-        .orb-drift {
-          animation: orb-drift 12s ease-in-out infinite;
         }
       `}</style>
     </div>
