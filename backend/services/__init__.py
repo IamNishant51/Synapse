@@ -39,6 +39,9 @@ from collections import OrderedDict
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+# Per-request user context for data isolation
+from context import set_current_user, get_current_user, _cache_key
+
 # Load only non-secret config from .env
 from dotenv import load_dotenv
 load_dotenv()
@@ -93,7 +96,15 @@ HAS_LLM = bool(GEMINI_API_KEY) or bool(GROQ_API_KEY)
 
 # ---- Cognee initialization ----
 COGNEE_READY = False
-COGNEE_DATASET = "synapse_default"
+
+def get_cognee_dataset(user_id: str | None = None) -> str:
+    uid = user_id if user_id else get_current_user()
+    return f"synapse_{uid}" if uid else "synapse_default"
+
+def get_session_id(user_id: str | None = None) -> str:
+    uid = user_id if user_id else get_current_user()
+    return f"session_{uid}" if uid else "default_session"
+
 try:
     import cognee
 
@@ -512,20 +523,20 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest)
                 truncated = content[:50000] if len(content) > 50000 else content
                 full = f"[Source: {req.label} | Type: {req.type} | Ingested: {datetime.now(timezone.utc).isoformat()}]\n\n{truncated}"
                 if file_path_to_remember:
-                    await cognee.remember(file_path_to_remember, dataset_name=COGNEE_DATASET)
+                    await cognee.remember(file_path_to_remember, dataset_name=get_cognee_dataset())
                 else:
-                    await cognee.remember(full, dataset_name=COGNEE_DATASET)
+                    await cognee.remember(full, dataset_name=get_cognee_dataset())
                 log_cognee_activity("remember()", f"Ingested source '{req.label}'")
                 
                 try:
-                    await asyncio.wait_for(cognee.cognify(datasets=[COGNEE_DATASET]), timeout=10.0)
+                    await asyncio.wait_for(cognee.cognify(datasets=[get_cognee_dataset()]), timeout=10.0)
                     log_cognee_activity("cognify()", f"Generated knowledge graph schemas for '{req.label}'")
                 except asyncio.TimeoutError:
                     print("[Cognee] cognify timed out, proceeding", flush=True)
                 
                 # Call Cognee's native memify pipeline to enrich knowledge graph memory
                 try:
-                    await asyncio.wait_for(cognee.memify(dataset=COGNEE_DATASET), timeout=10.0)
+                    await asyncio.wait_for(cognee.memify(dataset=get_cognee_dataset()), timeout=10.0)
                     log_cognee_activity("memify()", f"Indexed concepts and relation structures for '{req.label}'")
                 except asyncio.TimeoutError:
                     print("[Cognee] memify timed out, proceeding", flush=True)
@@ -710,7 +721,7 @@ async def run_reconciliation(content: str, label: str, date: str) -> list[dict]:
 
 
 async def get_graph_snapshot() -> GraphSnapshot:
-    cached = memory_cache.get("graph_snapshot")
+    cached = memory_cache.get(_cache_key("graph_snapshot"))
     if cached is not None:
         return cached
     # Try to fetch real graph data from Cognee first
@@ -758,7 +769,7 @@ async def get_graph_snapshot() -> GraphSnapshot:
                     node_ids = {n.id for n in mapped_nodes}
                     mapped_edges = [e for e in mapped_edges if e.source in node_ids and e.target in node_ids]
                 result = GraphSnapshot(nodes=mapped_nodes, edges=mapped_edges)
-                memory_cache.set("graph_snapshot", result, ttl=30)
+                memory_cache.set(_cache_key("graph_snapshot"), result, ttl=30)
                 return result
         except Exception as cognee_err:
             print(f"[Cognee] get_memory_provenance_graph failed: {cognee_err}", flush=True)
@@ -864,7 +875,7 @@ async def get_graph_snapshot() -> GraphSnapshot:
         edges = [e for e in edges if e.source in node_ids and e.target in node_ids]
 
     result = GraphSnapshot(nodes=nodes, edges=edges)
-    memory_cache.set("graph_snapshot", result, ttl=30)
+    memory_cache.set(_cache_key("graph_snapshot"), result, ttl=30)
     return result
 
 
@@ -978,7 +989,7 @@ def get_relevant_db_context(query: str, db_sources: list, db_conflicts: list) ->
 
 
 def get_ask_topics() -> dict[str, list[str]]:
-    cached = memory_cache.get("ask_topics")
+    cached = memory_cache.get(_cache_key("ask_topics"))
     if cached is not None:
         return cached
     tracked_topics = db_get_distinct_topics()
@@ -987,7 +998,7 @@ def get_ask_topics() -> dict[str, list[str]]:
         "trackedTopics": tracked_topics,
         "timelineTopics": timeline_topics,
     }
-    memory_cache.set("ask_topics", result, ttl=60)
+    memory_cache.set(_cache_key("ask_topics"), result, ttl=60)
     return result
 
 
@@ -1086,7 +1097,7 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
         try:
             cognee_results = await cognee.recall(
                 query_text=req.query,
-                datasets=[COGNEE_DATASET],
+                datasets=[get_cognee_dataset()],
                 only_context=True,
                 top_k=5,
             )
@@ -1361,7 +1372,7 @@ async def resolve_conflict(req: ResolveRequest) -> None:
                 if COGNEE_READY:
                     apply_cognee_llm_config()
                     try:
-                        await cognee.forget(data_id=c.oldNodeSummary, dataset=COGNEE_DATASET)
+                        await cognee.forget(data_id=c.oldNodeSummary, dataset=get_cognee_dataset())
                         log_cognee_activity("forget()", f"Pruned superseded old claim on '{c.topic}'")
                     except Exception as err:
                         print(f"[Cognee] failed to forget superseded old node: {err}", flush=True)
@@ -1385,7 +1396,7 @@ async def resolve_conflict(req: ResolveRequest) -> None:
                 if COGNEE_READY:
                     apply_cognee_llm_config()
                     try:
-                        await cognee.forget(data_id=c.newNodeSummary, dataset=COGNEE_DATASET)
+                        await cognee.forget(data_id=c.newNodeSummary, dataset=get_cognee_dataset())
                         log_cognee_activity("forget()", f"Pruned rejected new claim on '{c.topic}'")
                     except Exception as err:
                         print(f"[Cognee] failed to forget rejected new node: {err}", flush=True)
@@ -1410,7 +1421,7 @@ async def resolve_conflict(req: ResolveRequest) -> None:
 
 
 async def run_decay_check() -> DecayResult:
-    memory_cache.invalidate("graph_snapshot")
+    memory_cache.invalidate(_cache_key("graph_snapshot"))
     now_dt = datetime.now(timezone.utc)
     now = now_dt.isoformat()
     decayed = 0
@@ -1458,8 +1469,8 @@ async def run_decay_check() -> DecayResult:
             if COGNEE_READY:
                 apply_cognee_llm_config()
                 try:
-                    await cognee.forget(data_id=c.oldNodeSummary, dataset=COGNEE_DATASET)
-                    await cognee.forget(data_id=c.newNodeSummary, dataset=COGNEE_DATASET)
+                    await cognee.forget(data_id=c.oldNodeSummary, dataset=get_cognee_dataset())
+                    await cognee.forget(data_id=c.newNodeSummary, dataset=get_cognee_dataset())
                     log_cognee_activity("forget()", f"Pruned decayed stale claims on '{c.topic}'")
                 except Exception as err:
                     print(f"[Cognee] decay forget failed for {c.topic}: {err}", flush=True)
@@ -1487,11 +1498,11 @@ async def update_decay_settings(settings: DecaySettings) -> None:
 
 
 async def get_sources() -> list[Source]:
-    cached = memory_cache.get("sources")
+    cached = memory_cache.get(_cache_key("sources"))
     if cached is not None:
         return cached
     result = db_get_sources()
-    memory_cache.set("sources", result, ttl=30)
+    memory_cache.set(_cache_key("sources"), result, ttl=30)
     return result
 
 
@@ -1523,11 +1534,11 @@ async def forget_node(node_id: str) -> None:
     if COGNEE_READY:
         apply_cognee_llm_config()
         try:
-            await cognee.forget(data_id=node_id, dataset=COGNEE_DATASET)
+            await cognee.forget(data_id=node_id, dataset=get_cognee_dataset())
             log_cognee_activity("forget()", f"Pruned node ID '{node_id[:20]}' from graph")
         except Exception as cognee_err:
             print(f"[Cognee] forget failed: {cognee_err}", flush=True)
-    memory_cache.invalidate("graph_snapshot")
+    memory_cache.invalidate(_cache_key("graph_snapshot"))
 
 
 async def forget_source(source_id: str) -> None:
@@ -1538,12 +1549,12 @@ async def forget_source(source_id: str) -> None:
         if COGNEE_READY:
             apply_cognee_llm_config()
             try:
-                await cognee.forget(dataset=COGNEE_DATASET, data_id=target_source.label)
+                await cognee.forget(dataset=get_cognee_dataset(), data_id=target_source.label)
                 log_cognee_activity("forget()", f"Pruned source document '{target_source.label}'")
             except Exception:
                 pass
-    memory_cache.invalidate("sources")
-    memory_cache.invalidate("graph_snapshot")
+    memory_cache.invalidate(_cache_key("sources"))
+    memory_cache.invalidate(_cache_key("graph_snapshot"))
 
 
 async def get_memory_provenance_html() -> str:
@@ -1560,16 +1571,16 @@ async def get_memory_provenance_html() -> str:
 
 
 async def get_schema_inventory_data() -> list[dict]:
-    cached = memory_cache.get("schema_inventory")
+    cached = memory_cache.get(_cache_key("schema_inventory"))
     if cached is not None:
         return cached
     if not COGNEE_READY:
         return []
     apply_cognee_llm_config()
     try:
-        result = await cognee.get_schema_inventory(dataset=COGNEE_DATASET, samples_per_type=3)
+        result = await cognee.get_schema_inventory(dataset=get_cognee_dataset(), samples_per_type=3)
         log_cognee_activity("get_schema_inventory()", f"Retrieved {len(result)} entity types")
-        memory_cache.set("schema_inventory", result, ttl=60)
+        memory_cache.set(_cache_key("schema_inventory"), result, ttl=60)
         return result
     except Exception as e:
         log_cognee_activity("get_schema_inventory_error", str(e))
@@ -1605,7 +1616,7 @@ async def get_session_guidance(session_id: str = "default_session") -> dict:
     try:
         result = await cognee.session.distill_session(
             session_id=session_id,
-            dataset=COGNEE_DATASET,
+            dataset=get_cognee_dataset(),
         )
         return {
             "session_id": result.session_id,
@@ -1646,7 +1657,7 @@ async def remember_chat_turn(session_id: str, question: str, answer: str, contex
         await cognee.remember(
             data=qa_entry,
             session_id=session_id,
-            dataset_name=COGNEE_DATASET,
+            dataset_name=get_cognee_dataset(),
         )
         log_cognee_activity("session_remember", f"Stored chat turn in session '{session_id}'")
         return True

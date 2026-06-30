@@ -22,6 +22,7 @@ from models import (
     DecaySettings,
 )
 from services import (
+    set_current_user,
     ingest_source,
     get_ingestion_job,
     get_graph_snapshot,
@@ -77,6 +78,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Per-request user context from proxy header
+@app.middleware("http")
+async def inject_user_context(request: Request, call_next):
+    user_id = request.headers.get("X-User-Id", "")
+    if user_id:
+        set_current_user(user_id)
+    return await call_next(request)
 
 
 @app.on_event("startup")
