@@ -283,7 +283,11 @@ def db_init():
 def get_encryption_key() -> bytes:
     key_str = os.environ.get("SYNAPSE_ENCRYPTION_KEY")
     if not key_str:
-        access_key = os.environ.get("SYNAPSE_ACCESS_KEY", "default-fallback-encryption-key-12345")
+        access_key = os.environ.get("SYNAPSE_ACCESS_KEY")
+        if not access_key:
+            raise RuntimeError(
+                "Either SYNAPSE_ENCRYPTION_KEY or SYNAPSE_ACCESS_KEY must be set"
+            )
         hasher = hashlib.sha256(access_key.encode())
         return base64.urlsafe_b64encode(hasher.digest())
     try:

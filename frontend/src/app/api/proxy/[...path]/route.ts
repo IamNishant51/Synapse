@@ -15,6 +15,15 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
 
   const headers = new Headers(request.headers);
   headers.delete("host");
+  headers.delete("cookie");
+  headers.delete("authorization");
+  headers.delete("set-cookie");
+
+  // Forward the shared access key so the backend authenticates requests from the proxy
+  const accessKey = process.env.SYNAPSE_ACCESS_KEY;
+  if (accessKey) {
+    headers.set("X-Synapse-Key", accessKey);
+  }
 
   // Thread session user ID to backend for per-user data routing
   const session = await auth();

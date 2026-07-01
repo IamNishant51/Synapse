@@ -39,15 +39,17 @@ export default function NavRail() {
     <aside className="fixed bottom-0 md:top-0 left-0 z-40 flex w-full h-14 md:h-full md:w-56 flex-row md:flex-col bg-canvas border-t md:border-t-0 md:border-r border-hairline">
       {/* Brand */}
       <div className="hidden md:flex items-center px-5 pt-5 pb-6">
-        <Image
-          src={logoError ? "/images/synapse-logo.png" : isDark ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
-          alt="Synapse"
-          width={96}
-          height={28}
-          priority
-          className="object-contain"
-          onError={() => setLogoError(true)}
-        />
+        <Link href="/" className="cursor-pointer" aria-label="Go to landing page">
+          <Image
+            src={logoError ? "/images/synapse-logo.png" : isDark ? "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/LOGO-WHITE.png" : "https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/synapse-logo.png"}
+            alt="Synapse"
+            width={96}
+            height={28}
+            priority
+            className="object-contain"
+            onError={() => setLogoError(true)}
+          />
+        </Link>
       </div>
 
       {/* Nav links */}

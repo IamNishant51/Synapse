@@ -32,6 +32,8 @@ import fnmatch
 import re
 import json
 import httpx
+import ipaddress
+import socket
 import trafilatura
 from youtube_transcript_api import YouTubeTranscriptApi
 from datetime import datetime, timezone
@@ -320,6 +322,20 @@ async def call_llm(prompt: str, system_prompt: str = "You are a precise, analyti
 jobs: dict[str, dict] = {}
 _ch_counter = 5
 
+def _evict_stale_jobs():
+    now = time.time()
+    stale_keys = [
+        k for k, v in jobs.items()
+        if v.get("status") in ("completed", "failed")
+        and now - v.get("_updated_at", 0) > 300
+    ]
+    for k in stale_keys:
+        jobs.pop(k, None)
+
+def _touch_job(job_id: str, **updates):
+    updates["_updated_at"] = time.time()
+    jobs[job_id].update(updates)
+
 
 async def fetch_github_repo_content(repo_url: str, path_filter: Optional[str] = None) -> tuple[str, list[str]]:
     import zipfile
@@ -476,6 +492,7 @@ def fetch_youtube_transcript(url: str) -> str:
 
 
 def fetch_article_content(url: str) -> str:
+    _validate_url_safety(url)
     downloaded = trafilatura.fetch_url(url)
     if not downloaded:
         raise ValueError("Could not download article content")
@@ -511,7 +528,7 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest)
         else:
             content = req.content
             
-        jobs[job_id].update({"currentStep": "extracting", "progress": 30})
+        _touch_job(job_id, currentStep="extracting", progress=30)
         db_update_source_content(source.id, content)
 
         # Run Cognee ingestion and reconciliation in parallel
@@ -548,7 +565,7 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest)
                 content=content, label=req.label, date=datetime.now(timezone.utc).isoformat()
             )
 
-        jobs[job_id].update({"currentStep": "improve", "progress": 60})
+        _touch_job(job_id, currentStep="improve", progress=60)
         cognee_task = asyncio.create_task(do_cognee())
         recon_task = asyncio.create_task(do_reconciliation())
 
@@ -557,20 +574,20 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest)
         source.status = "ready"
         source.lastSyncedAt = datetime.now(timezone.utc).isoformat()
         db_save_source(source)
-        jobs[job_id].update({"currentStep": "reconcile", "progress": 80})
+        _touch_job(job_id, currentStep="reconcile", progress=80)
 
         # Reconciliation is best-effort — don't fail the source if it errors
         try:
             await recon_task
-            jobs[job_id].update({"progress": 100, "status": "completed"})
+            _touch_job(job_id, progress=100, status="completed")
         except Exception as recon_err:
             print(f"[Reconciliation] failed for {req.label}: {recon_err}", flush=True)
-            jobs[job_id].update({"currentStep": "reconcile_failed", "progress": 100, "status": "completed"})
+            _touch_job(job_id, currentStep="reconcile_failed", progress=100, status="completed")
 
     except Exception as e:
         source.status = "failed"
         db_save_source(source)
-        jobs[job_id].update({"status": "failed", "error": str(e)})
+        _touch_job(job_id, status="failed", error=str(e))
 
 
 async def ingest_source(req: IngestRequest) -> IngestResponse:
@@ -595,7 +612,9 @@ async def ingest_source(req: IngestRequest) -> IngestResponse:
         "progress": 0,
         "status": "running",
         "error": None,
+        "_updated_at": time.time(),
     }
+    _evict_stale_jobs()
 
     # Run the actual heavy lifting in the background
     asyncio.create_task(run_ingest_background(job_id, source, req))
@@ -1755,6 +1774,27 @@ def _detect_chat_platform(url: str) -> str:
     return "generic"
 
 
+def _validate_url_safety(url: str) -> None:
+    parsed = httpx.URL(url)
+    if parsed.host is None:
+        raise ValueError("URL has no host component")
+    host = parsed.host
+    try:
+        addrs = socket.getaddrinfo(host, None)
+    except socket.gaierror:
+        return
+    for family, _, _, _, sockaddr in addrs:
+        ip = sockaddr[0]
+        try:
+            addr = ipaddress.ip_address(ip)
+        except ValueError:
+            continue
+        if addr.is_private or addr.is_loopback or addr.is_link_local:
+            raise ValueError(f"Blocked request to private/internal IP: {ip}")
+        if addr.is_multicast or addr.is_reserved:
+            raise ValueError(f"Blocked request to reserved IP: {ip}")
+
+
 async def import_chat_from_url(url: str, label: str | None = None) -> dict:
     """
     Fetch and ingest a conversation from a public AI chat URL.
@@ -1763,6 +1803,8 @@ async def import_chat_from_url(url: str, label: str | None = None) -> dict:
     """
     platform = _detect_chat_platform(url)
     display_label = label or f"{platform.title()} Chat"
+
+    _validate_url_safety(url)
 
     # Use httpx to fetch the page with a browser-like User-Agent
     headers = {

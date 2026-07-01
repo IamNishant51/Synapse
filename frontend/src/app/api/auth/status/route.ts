@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import crypto from "crypto";
 
 export async function GET(request: NextRequest) {
   const sessionCookie = request.cookies.get("synapse_session");
@@ -9,6 +10,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ authenticated: true });
   }
 
-  const authenticated = sessionCookie?.value === secret;
+  if (!sessionCookie?.value) {
+    return NextResponse.json({ authenticated: false });
+  }
+
+  const parts = sessionCookie.value.split(".");
+  if (parts.length !== 2) {
+    return NextResponse.json({ authenticated: false });
+  }
+
+  const [sid, signature] = parts;
+  const hmac = crypto.createHmac("sha256", process.env.AUTH_SECRET || "fallback-dev-only");
+  hmac.update(sid);
+  const expected = hmac.digest("hex");
+
+  const authenticated = crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
   return NextResponse.json({ authenticated });
 }

@@ -214,7 +214,10 @@ export async function deleteAIConfig(): Promise<{ status: string }> {
 }
 
 export async function getAIModels(provider: string, key: string): Promise<{ models: string[] }> {
-  return fetchAPI(`/ai/models?provider=${encodeURIComponent(provider)}&key=${encodeURIComponent(key)}`);
+  return fetchAPI("/ai/models", {
+    method: "POST",
+    body: JSON.stringify({ provider, key }),
+  });
 }
 
 export async function getSchemaInventory(): Promise<SchemaInventoryItem[]> {

@@ -1,4 +1,5 @@
 import os
+import asyncio
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
@@ -53,7 +54,7 @@ from services import (
 limiter = Limiter(key_func=get_remote_address)
 
 async def verify_llm_authorization(x_synapse_key: str = Header(None)):
-    user_config = db_get_user_ai_config()
+    user_config = await asyncio.to_thread(db_get_user_ai_config)
     if user_config and user_config.get("provider") and user_config.get("model"):
         return  # BYOK is configured, bypass access key checks
     secret = os.environ.get("SYNAPSE_ACCESS_KEY")
@@ -92,6 +93,21 @@ async def inject_user_context(request: Request, call_next):
 async def startup_event():
     import cognee
     from services import COGNEE_READY
+
+    # Auto-save default AI config from env vars so BYOK is pre-configured
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    groq_key = os.environ.get("GROQ_API_KEY") or os.environ.get("LLM_API_KEY")
+    current_config = await asyncio.to_thread(db_get_user_ai_config)
+    if not current_config:
+        if gemini_key:
+            llm_model = (os.environ.get("LLM_MODEL", "gemini/gemini-2.5-flash")).split("/")[-1]
+            await asyncio.to_thread(db_save_user_ai_config, "gemini", gemini_key, llm_model)
+            print(f"[Startup] Auto-configured AI provider: gemini ({llm_model})", flush=True)
+        elif groq_key:
+            groq_model = (os.environ.get("LLM_MODEL_FALLBACK", "groq/llama-3.3-70b-versatile")).split("/")[-1]
+            await asyncio.to_thread(db_save_user_ai_config, "groq", groq_key, groq_model)
+            print(f"[Startup] Auto-configured AI provider: groq ({groq_model})", flush=True)
+
     if COGNEE_READY:
         try:
             print("[Cognee] Running startup migrations...", flush=True)
@@ -116,7 +132,7 @@ async def ingest(request: Request, req: IngestRequest, _auth=Depends(verify_llm_
 
 class ChatUrlImportRequest(BaseModel):
     url: str = Field(..., max_length=2000)
-    label: str | None = None
+    label: str | None = Field(None, max_length=200)
 
 
 @app.post("/import/chat-url")
@@ -129,7 +145,7 @@ async def import_chat_url_route(req: ChatUrlImportRequest, _auth=Depends(verify_
 
 
 @app.get("/ingest/{job_id}")
-async def ingestion_job(job_id: str):
+async def ingestion_job(job_id: str, _auth=Depends(verify_llm_authorization)):
     job = await get_ingestion_job(job_id)
     if job.get("status") == "not_found":
         raise HTTPException(status_code=404, detail="Job not found")
@@ -137,18 +153,18 @@ async def ingestion_job(job_id: str):
 
 
 @app.get("/graph-snapshot")
-async def graph_snapshot():
+async def graph_snapshot(_auth=Depends(verify_llm_authorization)):
     return await get_graph_snapshot()
 
 
 class NodeSummarizeRequest(BaseModel):
-    nodeId: str
-    label: str
-    sourceProvenance: str
+    nodeId: str = Field(..., max_length=500)
+    label: str = Field(..., max_length=500)
+    sourceProvenance: str = Field(..., max_length=5000)
 
 
 @app.post("/nodes/summarize")
-async def node_summarize(req: NodeSummarizeRequest):
+async def node_summarize(req: NodeSummarizeRequest, _auth=Depends(verify_llm_authorization)):
     summary = await generate_node_summary(req.nodeId, req.label, req.sourceProvenance)
     return {"summary": summary}
 
@@ -160,12 +176,12 @@ async def recall(request: Request, req: RecallRequest, _auth=Depends(verify_llm_
 
 
 @app.get("/topics")
-async def ask_topics():
+async def ask_topics(_auth=Depends(verify_llm_authorization)):
     return get_ask_topics()
 
 
 @app.get("/reconciliation/events")
-async def reconciliation_events():
+async def reconciliation_events(_auth=Depends(verify_llm_authorization)):
     return await get_conflict_events()
 
 
@@ -176,96 +192,96 @@ async def reconciliation_resolve(req: ResolveRequest, _auth=Depends(verify_llm_a
 
 
 @app.post("/decay/run")
-async def decay_run():
+async def decay_run(_auth=Depends(verify_llm_authorization)):
     return await run_decay_check()
 
 
 @app.get("/decay/settings")
-async def decay_settings_get():
+async def decay_settings_get(_auth=Depends(verify_llm_authorization)):
     return await get_decay_settings()
 
 
 @app.put("/decay/settings")
-async def decay_settings_put(settings: DecaySettings):
+async def decay_settings_put(settings: DecaySettings, _auth=Depends(verify_llm_authorization)):
     await update_decay_settings(settings)
     return {"status": "ok"}
 
 
 @app.get("/sources")
-async def sources_list():
+async def sources_list(_auth=Depends(verify_llm_authorization)):
     return await get_sources()
 
 
 @app.get("/nodes/search")
-async def nodes_search(q: str = ""):
+async def nodes_search(q: str = "", _auth=Depends(verify_llm_authorization)):
     return await search_nodes(q)
 
 
 @app.post("/forget/node")
-async def forget_node_endpoint(req: ForgetNodeRequest):
+async def forget_node_endpoint(req: ForgetNodeRequest, _auth=Depends(verify_llm_authorization)):
     await forget_node(req.nodeId)
     return {"status": "ok"}
 
 
 @app.post("/forget/source")
-async def forget_source_endpoint(req: ForgetSourceRequest):
+async def forget_source_endpoint(req: ForgetSourceRequest, _auth=Depends(verify_llm_authorization)):
     await forget_source(req.sourceId)
     return {"status": "ok"}
 
 
 @app.post("/reset-demo")
-async def reset_demo_endpoint():
+async def reset_demo_endpoint(_auth=Depends(verify_llm_authorization)):
     await reset_demo_data()
     return {"status": "ok"}
 
 
 @app.get("/cognee/activity")
-async def cognee_activity_endpoint():
+async def cognee_activity_endpoint(_auth=Depends(verify_llm_authorization)):
     return get_cognee_activities()
 
 
 @app.get("/provenance")
-async def memory_provenance():
+async def memory_provenance(_auth=Depends(verify_llm_authorization)):
     html = await get_memory_provenance_html()
     return HTMLResponse(content=html, media_type="text/html")
 
 
 @app.get("/schema-inventory")
-async def schema_inventory():
+async def schema_inventory(_auth=Depends(verify_llm_authorization)):
     return await get_schema_inventory_data()
 
 
 class SessionQuery(BaseModel):
-    session_id: str = "default_session"
+    session_id: str = Field("default_session", max_length=200)
     last_n: int | None = 5
 
 
 @app.post("/session/history")
-async def session_history(req: SessionQuery):
+async def session_history(req: SessionQuery, _auth=Depends(verify_llm_authorization)):
     return await get_session_history(session_id=req.session_id, last_n=req.last_n)
 
 
 @app.post("/session/distill")
-async def session_distill(req: SessionQuery):
+async def session_distill(req: SessionQuery, _auth=Depends(verify_llm_authorization)):
     return await get_session_guidance(session_id=req.session_id)
 
 
 class FeedbackRequest(BaseModel):
-    session_id: str
-    qa_id: str
-    feedback_text: str | None = None
+    session_id: str = Field(..., max_length=200)
+    qa_id: str = Field(..., max_length=200)
+    feedback_text: str | None = Field(None, max_length=5000)
     feedback_score: int | None = None
 
 
 class ChatTurnRequest(BaseModel):
-    session_id: str = "default_session"
-    question: str
-    answer: str
-    context: str = ""
+    session_id: str = Field("default_session", max_length=200)
+    question: str = Field(..., max_length=50000)
+    answer: str = Field(..., max_length=100000)
+    context: str = Field("", max_length=50000)
 
 
 @app.post("/session/remember")
-async def session_remember(req: ChatTurnRequest):
+async def session_remember(req: ChatTurnRequest, _auth=Depends(verify_llm_authorization)):
     ok = await remember_chat_turn(
         session_id=req.session_id,
         question=req.question,
@@ -276,7 +292,7 @@ async def session_remember(req: ChatTurnRequest):
 
 
 @app.post("/session/feedback")
-async def session_feedback(req: FeedbackRequest):
+async def session_feedback(req: FeedbackRequest, _auth=Depends(verify_llm_authorization)):
     ok = await add_session_feedback(
         session_id=req.session_id,
         qa_id=req.qa_id,
@@ -287,16 +303,29 @@ async def session_feedback(req: FeedbackRequest):
 
 
 class AIConfigRequest(BaseModel):
-    provider: str
-    apiKey: str
-    model: str
+    provider: str = Field(..., max_length=100)
+    apiKey: str = Field(..., max_length=500)
+    model: str = Field(..., max_length=200)
 
+class AIModelsRequest(BaseModel):
+    provider: str = Field(..., max_length=100)
+    key: str = Field(default="", max_length=500)
 
-@app.get("/ai/models")
+@app.post("/ai/models")
 @limiter.limit("10/minute")
-async def get_ai_models(request: Request, provider: str, key: str):
-    if not key or not provider:
-        raise HTTPException(status_code=400, detail="Provider and key are required")
+async def get_ai_models(request: Request, req: AIModelsRequest, _auth=Depends(verify_llm_authorization)):
+    provider = req.provider
+    key = req.key
+    
+    # For hackathon: if no key provided, use default env key for the default provider
+    if not key:
+        if provider == "gemini":
+            key = os.environ.get("GEMINI_API_KEY", "")
+        elif provider == "groq":
+            key = os.environ.get("GROQ_API_KEY") or os.environ.get("LLM_API_KEY", "")
+    
+    if not key:
+        raise HTTPException(status_code=400, detail="No API key available for this provider")
         
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -317,7 +346,8 @@ async def get_ai_models(request: Request, provider: str, key: str):
                 models = [m["id"] for m in data.get("data", [])]
                 
             elif provider == "gemini":
-                r = await client.get(f"https://generativelanguage.googleapis.com/v1beta/models?key={key}")
+                headers = {"X-Goog-Api-Key": key}
+                r = await client.get("https://generativelanguage.googleapis.com/v1beta/models", headers=headers)
                 if r.status_code != 200:
                     raise HTTPException(status_code=r.status_code, detail=f"Gemini API error: {r.text}")
                 data = r.json()
@@ -339,31 +369,61 @@ async def get_ai_models(request: Request, provider: str, key: str):
 
 
 @app.get("/ai/config")
-async def get_ai_config_endpoint():
-    config = db_get_user_ai_config()
+async def get_ai_config_endpoint(_auth=Depends(verify_llm_authorization)):
+    config = await asyncio.to_thread(db_get_user_ai_config)
     if config:
         return {
             "configured": True,
             "provider": config["provider"],
             "model": config["model"]
         }
+    
+    # Check for default environment API keys for hackathon/demo mode
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    groq_key = os.environ.get("GROQ_API_KEY") or os.environ.get("LLM_API_KEY")
+    llm_provider = os.environ.get("LLM_PROVIDER", "gemini")
+    
+    if gemini_key and (llm_provider == "gemini" or not groq_key):
+        return {
+            "configured": True,
+            "provider": "gemini",
+            "model": (os.environ.get("LLM_MODEL", "gemini/gemini-2.5-flash")).split("/")[-1]
+        }
+    elif groq_key:
+        return {
+            "configured": True,
+            "provider": "groq",
+            "model": (os.environ.get("LLM_MODEL_FALLBACK", "groq/llama-3.3-70b-versatile")).split("/")[-1]
+        }
+    
     return {"configured": False}
 
 
 @app.post("/ai/config")
 @limiter.limit("5/minute")
-async def save_ai_config_endpoint(request: Request, config_req: AIConfigRequest):
-    if not config_req.provider or not config_req.apiKey or not config_req.model:
+async def save_ai_config_endpoint(request: Request, config_req: AIConfigRequest, _auth=Depends(verify_llm_authorization)):
+    if not config_req.provider or not config_req.model:
         raise HTTPException(status_code=400, detail="Missing required configuration fields")
     
-    db_save_user_ai_config(config_req.provider, config_req.apiKey, config_req.model)
+    api_key = config_req.apiKey
+    # If no API key provided, use default env key for the provider
+    if not api_key:
+        if config_req.provider == "gemini":
+            api_key = os.environ.get("GEMINI_API_KEY", "")
+        elif config_req.provider == "groq":
+            api_key = os.environ.get("GROQ_API_KEY") or os.environ.get("LLM_API_KEY", "")
+    
+    if not api_key:
+        raise HTTPException(status_code=400, detail="No API key available for this provider")
+    
+    await asyncio.to_thread(db_save_user_ai_config, config_req.provider, api_key, config_req.model)
     apply_cognee_llm_config()
     return {"status": "ok"}
 
 
 @app.delete("/ai/config")
-async def delete_ai_config_endpoint():
-    db_delete_user_ai_config()
+async def delete_ai_config_endpoint(_auth=Depends(verify_llm_authorization)):
+    await asyncio.to_thread(db_delete_user_ai_config)
     apply_cognee_llm_config()
     return {"status": "ok"}
 

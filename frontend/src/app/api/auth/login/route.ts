@@ -1,4 +1,11 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
+
+function signSession(sid: string): string {
+  const hmac = crypto.createHmac("sha256", process.env.AUTH_SECRET || "fallback-dev-only");
+  hmac.update(sid);
+  return `${sid}.${hmac.digest("hex")}`;
+}
 
 export async function POST(request: Request) {
   try {
@@ -10,15 +17,16 @@ export async function POST(request: Request) {
     }
 
     if (password === correctPassword) {
+      const sid = crypto.randomUUID();
       const response = NextResponse.json({ success: true });
       response.cookies.set({
         name: "synapse_session",
-        value: password,
+        value: signSession(sid),
         httpOnly: true,
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 60 * 60 * 24 * 7, // 1 week
+        sameSite: "strict",
+        maxAge: 60 * 60 * 24 * 7,
       });
       return response;
     }

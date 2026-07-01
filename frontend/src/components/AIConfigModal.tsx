@@ -44,6 +44,14 @@ export default function AIConfigModal() {
     }
   }, [isModalOpen, config]);
 
+  // Auto-fetch models when config is already configured (from default env keys)
+  useEffect(() => {
+    if (isModalOpen && config?.configured && step === 2 && !loadingModels && models.length === 0 && (provider === "gemini" || provider === "groq")) {
+      // Use empty key to trigger backend to use default env keys
+      fetchModelsWithDefaultKey();
+    }
+  }, [isModalOpen]);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeModal();
@@ -59,17 +67,16 @@ export default function AIConfigModal() {
   };
 
   const handleFetchModels = async () => {
-    if (!apiKey.trim()) {
-      setErrorMsg("Please enter a valid API key first");
-      return;
-    }
-
+    // If no API key provided and config is already configured (using default env keys), 
+    // fetch models with empty key to let backend use default keys
+    const keyToUse = apiKey.trim() || "";
+    
     setLoadingModels(true);
     setErrorMsg("");
     setModels([]);
 
     try {
-      const res = await getAIModels(provider, apiKey.trim());
+      const res = await getAIModels(provider, keyToUse);
       if (res.models && res.models.length > 0) {
         setModels(res.models);
         let defaultModel = res.models[0];
@@ -87,6 +94,36 @@ export default function AIConfigModal() {
         setStep(3);
       } else {
         setErrorMsg("No models returned for this key. Make sure the key has model access permissions.");
+      }
+    } catch (err: unknown) {
+      console.error(err);
+      setErrorMsg(getCleanErrorMessage(err));
+    } finally {
+      setLoadingModels(false);
+    }
+  };
+
+  const fetchModelsWithDefaultKey = async () => {
+    setLoadingModels(true);
+    setErrorMsg("");
+    setModels([]);
+
+    try {
+      const res = await getAIModels(provider, "");
+      if (res.models && res.models.length > 0) {
+        setModels(res.models);
+        let defaultModel = res.models[0];
+        if (provider === "groq") {
+          const preferred = res.models.find(m => m.includes("llama-3.3-70b") || m.includes("llama3-70b") || m.includes("mixtral"));
+          if (preferred) defaultModel = preferred;
+        } else if (provider === "gemini") {
+          const preferred = res.models.find(m => m.includes("gemini-1.5-flash") || m.includes("gemini-1.5-pro"));
+          if (preferred) defaultModel = preferred;
+        }
+        setSelectedModel(defaultModel);
+        setStep(3);
+      } else {
+        setErrorMsg("No models available with default configuration. Please add your own API key.");
       }
     } catch (err: unknown) {
       console.error(err);
