@@ -471,12 +471,13 @@ async def save_base64_pdf(content_str: str, label: str) -> str:
     if not pdf_bytes.startswith(b"%PDF-"):
         raise ValueError("File is not a valid PDF (missing PDF header)")
 
-    # Validate PDF structure with PyMuPDF
+    # Validate PDF structure with PyMuPDF (optional)
     try:
         import fitz
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        page_count = doc.page_count
         doc.close()
+    except ImportError:
+        pass  # PyMuPDF not installed, skip structural check
     except Exception as e:
         raise ValueError(f"PDF parsing failed: {e}")
 
