@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 
 function signSession(sid: string): string {
-  const hmac = crypto.createHmac("sha256", process.env.AUTH_SECRET || "fallback-dev-only");
+  if (!process.env.AUTH_SECRET) {
+    throw new Error("Server misconfigured: AUTH_SECRET not set");
+  }
+  const hmac = crypto.createHmac("sha256", process.env.AUTH_SECRET);
   hmac.update(sid);
   return `${sid}.${hmac.digest("hex")}`;
 }
@@ -32,7 +35,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ success: false, error: "Incorrect access key" }, { status: 401 });
-  } catch {
-    return NextResponse.json({ success: false, error: "Invalid request" }, { status: 400 });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Invalid request";
+    return NextResponse.json({ success: false, error: msg }, { status: 400 });
   }
 }

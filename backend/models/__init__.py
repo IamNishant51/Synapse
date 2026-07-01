@@ -5,9 +5,9 @@ from pydantic import BaseModel, Field
 class IngestRequest(BaseModel):
     type: Literal["pdf", "github", "conversation", "article", "youtube"]
     content: str = Field(..., max_length=500_000)
-    label: str
-    url: Optional[str] = None
-    pathFilter: Optional[str] = None
+    label: str = Field(..., max_length=200)
+    url: Optional[str] = Field(None, max_length=2000)
+    pathFilter: Optional[str] = Field(None, max_length=500)
 
 
 class IngestResponse(BaseModel):

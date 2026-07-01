@@ -140,8 +140,35 @@ def get_db_connection():
         return DBConnectionWrapper(conn, is_postgres=False)
 
 
+# Context manager for safe connection lifecycle
+class _db:
+    def __enter__(self):
+        self.conn = get_db_connection()
+        self.cursor = self.conn.cursor()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if exc_type is None:
+                self.conn.commit()
+        finally:
+            self.conn.close()
+
+    def execute(self, sql, params=None):
+        return self.cursor.execute(sql, params)
+
+    def fetchone(self):
+        return self.cursor.fetchone()
+
+    def fetchall(self):
+        return self.cursor.fetchall()
+
+
 def _ensure_user_id_column(conn, table: str):
     """Add user_id column if it doesn't exist (safe migration)."""
+    allowed_tables = {"sources", "conflicts", "reconciliation_log", "confidence_history"}
+    if table not in allowed_tables:
+        raise ValueError(f"Unknown table: {table}")
     try:
         cursor = conn.cursor()
         cursor.execute(f"ALTER TABLE {table} ADD COLUMN user_id TEXT NOT NULL DEFAULT ''")
@@ -282,19 +309,15 @@ def db_init():
 # Encryption helpers for BYOK
 def get_encryption_key() -> bytes:
     key_str = os.environ.get("SYNAPSE_ENCRYPTION_KEY")
-    if not key_str:
-        access_key = os.environ.get("SYNAPSE_ACCESS_KEY")
-        if not access_key:
-            raise RuntimeError(
-                "Either SYNAPSE_ENCRYPTION_KEY or SYNAPSE_ACCESS_KEY must be set"
-            )
-        hasher = hashlib.sha256(access_key.encode())
-        return base64.urlsafe_b64encode(hasher.digest())
+    if not key_str or len(key_str) < 16:
+        raise RuntimeError(
+            "SYNAPSE_ENCRYPTION_KEY must be set to a random value of at least 16 characters. "
+            "Generate one with: python -c \"import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())\""
+        )
     try:
-        return key_str.encode()
+        return base64.urlsafe_b64encode(hashlib.sha256(key_str.encode()).digest())
     except Exception:
-        hasher = hashlib.sha256(key_str.encode())
-        return base64.urlsafe_b64encode(hasher.digest())
+        raise RuntimeError("Invalid SYNAPSE_ENCRYPTION_KEY format")
 
 def encrypt_key(plain_key: str) -> str:
     f = Fernet(get_encryption_key())
@@ -310,25 +333,29 @@ def db_save_user_ai_config(provider: str, api_key: str, model: str):
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc).isoformat()
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-    INSERT INTO user_ai_config (id, provider, api_key_encrypted, model, updated_at)
-    VALUES (1, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-        provider = excluded.provider,
-        api_key_encrypted = excluded.api_key_encrypted,
-        model = excluded.model,
-        updated_at = excluded.updated_at
-    """, (provider, encrypted, model, now))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+        INSERT INTO user_ai_config (id, provider, api_key_encrypted, model, updated_at)
+        VALUES (1, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            provider = excluded.provider,
+            api_key_encrypted = excluded.api_key_encrypted,
+            model = excluded.model,
+            updated_at = excluded.updated_at
+        """, (provider, encrypted, model, now))
+        conn.commit()
+    finally:
+        conn.close()
 
 def db_get_user_ai_config() -> Optional[dict]:
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT provider, api_key_encrypted, model FROM user_ai_config WHERE id = 1")
-    row = cursor.fetchone()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT provider, api_key_encrypted, model FROM user_ai_config WHERE id = 1")
+        row = cursor.fetchone()
+    finally:
+        conn.close()
     if not row:
         return None
     try:
@@ -343,45 +370,70 @@ def db_get_user_ai_config() -> Optional[dict]:
 
 def db_delete_user_ai_config():
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM user_ai_config WHERE id = 1")
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM user_ai_config WHERE id = 1")
+        conn.commit()
+    finally:
+        conn.close()
 
 # Sources CRUD
 def db_save_source(s: Source, user_id: str = ""):
     user_id = user_id or get_current_user()
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-    INSERT INTO sources (id, type, label, url, file_path, ingested_at, last_synced_at, status, user_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-        status=excluded.status,
-        last_synced_at=excluded.last_synced_at,
-        file_path=excluded.file_path
-    """, (s.id, s.type, s.label, s.url, s.filePath, s.ingestedAt, s.lastSyncedAt, s.status, user_id))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+        INSERT INTO sources (id, type, label, url, file_path, ingested_at, last_synced_at, status, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            status=excluded.status,
+            last_synced_at=excluded.last_synced_at,
+            file_path=excluded.file_path
+        """, (s.id, s.type, s.label, s.url, s.filePath, s.ingestedAt, s.lastSyncedAt, s.status, user_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+def _claim_orphaned_sources(user_id: str) -> None:
+    """Assign sources with empty user_id to the given user. Runs once per user per session."""
+    if not user_id:
+        return
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE sources SET user_id = ? WHERE user_id = ''", (user_id,))
+        conn.commit()
+        cursor.execute("UPDATE conflicts SET user_id = ? WHERE user_id = ''", (user_id,))
+        cursor.execute("UPDATE reconciliation_log SET user_id = ? WHERE user_id = ''", (user_id,))
+        cursor.execute("UPDATE confidence_history SET user_id = ? WHERE user_id = ''", (user_id,))
+        conn.commit()
+    finally:
+        conn.close()
 
 def db_get_sources(user_id: str = "") -> List[Source]:
     user_id = user_id or get_current_user()
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        from datetime import datetime, timezone, timedelta
-        cutoff = (datetime.now(timezone.utc) - timedelta(seconds=120)).isoformat()
-        cursor.execute("UPDATE sources SET status='ready' WHERE status='processing' AND ingested_at < ?", (cutoff,))
-    except Exception:
-        pass
-
     if user_id:
-        cursor.execute("SELECT * FROM sources WHERE user_id = ? OR user_id = '' ORDER BY ingested_at DESC", (user_id,))
-    else:
-        cursor.execute("SELECT * FROM sources ORDER BY ingested_at DESC")
-    rows = cursor.fetchall()
-    conn.close()
+        _claim_orphaned_sources(user_id)
+
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        try:
+            from datetime import datetime, timezone, timedelta
+            cutoff = (datetime.now(timezone.utc) - timedelta(seconds=120)).isoformat()
+            cursor.execute("UPDATE sources SET status='ready' WHERE status='processing' AND ingested_at < ?", (cutoff,))
+        except Exception:
+            pass
+
+        if user_id:
+            cursor.execute("SELECT * FROM sources WHERE user_id = ? ORDER BY ingested_at DESC", (user_id,))
+        else:
+            cursor.execute("SELECT * FROM sources ORDER BY ingested_at DESC")
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
     return [
         Source(
             id=r["id"],
@@ -399,95 +451,105 @@ def db_get_sources(user_id: str = "") -> List[Source]:
 def db_update_source_content(source_id: str, content: str, user_id: str = ""):
     user_id = user_id or get_current_user()
     conn = get_db_connection()
-    cursor = conn.cursor()
-    if user_id:
-        cursor.execute("UPDATE sources SET content = ? WHERE id = ? AND user_id = ?", (content, source_id, user_id))
-    else:
-        cursor.execute("UPDATE sources SET content = ? WHERE id = ?", (content, source_id))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        if user_id:
+            cursor.execute("UPDATE sources SET content = ? WHERE id = ? AND user_id = ?", (content, source_id, user_id))
+        else:
+            cursor.execute("UPDATE sources SET content = ? WHERE id = ?", (content, source_id))
+        conn.commit()
+    finally:
+        conn.close()
 
 def db_get_source_content(source_label: str, user_id: str = "") -> Optional[str]:
     user_id = user_id or get_current_user()
     conn = get_db_connection()
-    cursor = conn.cursor()
-    if user_id:
-        cursor.execute("SELECT content FROM sources WHERE label = ? AND user_id = ?", (source_label, user_id))
-    else:
-        cursor.execute("SELECT content FROM sources WHERE label = ?", (source_label,))
-    row = cursor.fetchone()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        if user_id:
+            cursor.execute("SELECT content FROM sources WHERE label = ? AND user_id = ?", (source_label, user_id))
+        else:
+            cursor.execute("SELECT content FROM sources WHERE label = ?", (source_label,))
+        row = cursor.fetchone()
+    finally:
+        conn.close()
     return row["content"] if row else None
 
 def db_delete_source(source_id: str, user_id: str = ""):
     user_id = user_id or get_current_user()
     conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT label FROM sources WHERE id=? AND user_id=?", (source_id, user_id))
-    row = cursor.fetchone()
-    if row:
-        label = row["label"]
-        
-        cursor.execute("SELECT DISTINCT topic FROM conflicts WHERE (old_node_source=? OR new_node_source=?) AND user_id=?", (label, label, user_id))
-        topics = [r["topic"] for r in cursor.fetchall()]
-        
-        cursor.execute("DELETE FROM conflicts WHERE (old_node_source=? OR new_node_source=?) AND user_id=?", (label, label, user_id))
-        cursor.execute("DELETE FROM reconciliation_log WHERE source=? AND user_id=?", (label, user_id))
-        
-        if topics:
-            placeholders = ",".join("?" for _ in topics)
-            cursor.execute(f"DELETE FROM confidence_history WHERE topic IN ({placeholders}) AND user_id=?", topics + [user_id])
-    
-    cursor.execute("DELETE FROM sources WHERE id=? AND user_id=?", (source_id, user_id))
-    
-    cursor.execute("SELECT COUNT(*) FROM sources WHERE user_id=?", (user_id,))
-    if cursor.fetchone()[0] == 0:
-        cursor.execute("DELETE FROM conflicts WHERE user_id=?", (user_id,))
-        cursor.execute("DELETE FROM reconciliation_log WHERE user_id=?", (user_id,))
-        cursor.execute("DELETE FROM confidence_history WHERE user_id=?", (user_id,))
-        cursor.execute("DELETE FROM db_metadata WHERE key='seeded'")
-        
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT label FROM sources WHERE id=? AND user_id=?", (source_id, user_id))
+        row = cursor.fetchone()
+        if row:
+            label = row["label"]
+
+            cursor.execute("SELECT DISTINCT topic FROM conflicts WHERE (old_node_source=? OR new_node_source=?) AND user_id=?", (label, label, user_id))
+            topics = [r["topic"] for r in cursor.fetchall()]
+
+            cursor.execute("DELETE FROM conflicts WHERE (old_node_source=? OR new_node_source=?) AND user_id=?", (label, label, user_id))
+            cursor.execute("DELETE FROM reconciliation_log WHERE source=? AND user_id=?", (label, user_id))
+
+            if topics:
+                placeholders = ",".join("?" for _ in topics)
+                cursor.execute(f"DELETE FROM confidence_history WHERE topic IN ({placeholders}) AND user_id=?", topics + [user_id])
+
+        cursor.execute("DELETE FROM sources WHERE id=? AND user_id=?", (source_id, user_id))
+
+        cursor.execute("SELECT COUNT(*) FROM sources WHERE user_id=?", (user_id,))
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("DELETE FROM conflicts WHERE user_id=?", (user_id,))
+            cursor.execute("DELETE FROM reconciliation_log WHERE user_id=?", (user_id,))
+            cursor.execute("DELETE FROM confidence_history WHERE user_id=?", (user_id,))
+            cursor.execute("DELETE FROM db_metadata WHERE key='seeded'")
+
+        conn.commit()
+    finally:
+        conn.close()
 
 # Conflicts CRUD
 def db_save_conflict(c: ConflictEvent, user_id: str = ""):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-    INSERT INTO conflicts (
-        id, old_node_summary, old_node_date, old_node_source,
-        new_node_summary, new_node_date, new_node_source,
-        topic, relationship, llm_confidence, status, resolution_note, created_at, user_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(id) DO UPDATE SET
-        status=excluded.status,
-        resolution_note=excluded.resolution_note
-    """, (
-        c.id, c.oldNodeSummary, c.oldNodeDate, c.oldNodeSource,
-        c.newNodeSummary, c.newNodeDate, c.newNodeSource,
-        c.topic, c.relationship, c.llmConfidence, c.status, c.resolutionNote, c.createdAt, user_id
-    ))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+        INSERT INTO conflicts (
+            id, old_node_summary, old_node_date, old_node_source,
+            new_node_summary, new_node_date, new_node_source,
+            topic, relationship, llm_confidence, status, resolution_note, created_at, user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+            status=excluded.status,
+            resolution_note=excluded.resolution_note
+        """, (
+            c.id, c.oldNodeSummary, c.oldNodeDate, c.oldNodeSource,
+            c.newNodeSummary, c.newNodeDate, c.newNodeSource,
+            c.topic, c.relationship, c.llmConfidence, c.status, c.resolutionNote, c.createdAt, user_id
+        ))
+        conn.commit()
+    finally:
+        conn.close()
 
 def db_get_conflicts(include_resolved: bool = True, user_id: str = "") -> List[ConflictEvent]:
     user_id = user_id or get_current_user()
     conn = get_db_connection()
-    cursor = conn.cursor()
-    if user_id:
-        if include_resolved:
-            cursor.execute("SELECT * FROM conflicts WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
+    try:
+        cursor = conn.cursor()
+        if user_id:
+            if include_resolved:
+                cursor.execute("SELECT * FROM conflicts WHERE user_id = ? ORDER BY created_at DESC", (user_id,))
+            else:
+                cursor.execute("SELECT * FROM conflicts WHERE status='pending' AND user_id = ? ORDER BY created_at DESC", (user_id,))
         else:
-            cursor.execute("SELECT * FROM conflicts WHERE status='pending' AND user_id = ? ORDER BY created_at DESC", (user_id,))
-    else:
-        if include_resolved:
-            cursor.execute("SELECT * FROM conflicts ORDER BY created_at DESC")
-        else:
-            cursor.execute("SELECT * FROM conflicts WHERE status='pending' ORDER BY created_at DESC")
-    rows = cursor.fetchall()
-    conn.close()
+            if include_resolved:
+                cursor.execute("SELECT * FROM conflicts ORDER BY created_at DESC")
+            else:
+                cursor.execute("SELECT * FROM conflicts WHERE status='pending' ORDER BY created_at DESC")
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
     return [
         ConflictEvent(
             id=r["id"],
@@ -510,30 +572,34 @@ def db_get_conflicts(include_resolved: bool = True, user_id: str = "") -> List[C
 # Reconciliation Log CRUD
 def db_save_reconciliation_log_entry(e: ReconciliationLogEntry, user_id: str = ""):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-    INSERT INTO reconciliation_log (id, event_type, topic, old_summary, new_summary, source, created_at, user_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (e.id, e.eventType, e.topic, e.oldSummary, e.newSummary, e.source, e.createdAt, user_id))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+        INSERT INTO reconciliation_log (id, event_type, topic, old_summary, new_summary, source, created_at, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (e.id, e.eventType, e.topic, e.oldSummary, e.newSummary, e.source, e.createdAt, user_id))
+        conn.commit()
+    finally:
+        conn.close()
 
 def db_get_reconciliation_log(topic: Optional[str] = None, user_id: str = "") -> List[ReconciliationLogEntry]:
     user_id = user_id or get_current_user()
     conn = get_db_connection()
-    cursor = conn.cursor()
-    if user_id:
-        if topic:
-            cursor.execute("SELECT * FROM reconciliation_log WHERE topic=? AND user_id=? ORDER BY created_at DESC", (topic, user_id))
+    try:
+        cursor = conn.cursor()
+        if user_id:
+            if topic:
+                cursor.execute("SELECT * FROM reconciliation_log WHERE topic=? AND user_id=? ORDER BY created_at DESC", (topic, user_id))
+            else:
+                cursor.execute("SELECT * FROM reconciliation_log WHERE user_id=? ORDER BY created_at DESC", (user_id,))
         else:
-            cursor.execute("SELECT * FROM reconciliation_log WHERE user_id=? ORDER BY created_at DESC", (user_id,))
-    else:
-        if topic:
-            cursor.execute("SELECT * FROM reconciliation_log WHERE topic=? ORDER BY created_at DESC", (topic,))
-        else:
-            cursor.execute("SELECT * FROM reconciliation_log ORDER BY created_at DESC")
-    rows = cursor.fetchall()
-    conn.close()
+            if topic:
+                cursor.execute("SELECT * FROM reconciliation_log WHERE topic=? ORDER BY created_at DESC", (topic,))
+            else:
+                cursor.execute("SELECT * FROM reconciliation_log ORDER BY created_at DESC")
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
     return [
         ReconciliationLogEntry(
             id=r["id"],
@@ -550,30 +616,34 @@ def db_get_reconciliation_log(topic: Optional[str] = None, user_id: str = "") ->
 # Confidence History CRUD
 def db_save_confidence_history_entry(e: ConfidenceHistoryEntry, user_id: str = ""):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-    INSERT INTO confidence_history (id, topic, value_summary, confidence_score, reason, date, user_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (e.id, e.topic, e.valueSummary, e.confidenceScore, e.reason, e.date, user_id))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+        INSERT INTO confidence_history (id, topic, value_summary, confidence_score, reason, date, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (e.id, e.topic, e.valueSummary, e.confidenceScore, e.reason, e.date, user_id))
+        conn.commit()
+    finally:
+        conn.close()
 
 def db_get_confidence_history(topic: Optional[str] = None, user_id: str = "") -> List[ConfidenceHistoryEntry]:
     user_id = user_id or get_current_user()
     conn = get_db_connection()
-    cursor = conn.cursor()
-    if user_id:
-        if topic:
-            cursor.execute("SELECT * FROM confidence_history WHERE topic=? AND user_id=? ORDER BY date ASC", (topic, user_id))
+    try:
+        cursor = conn.cursor()
+        if user_id:
+            if topic:
+                cursor.execute("SELECT * FROM confidence_history WHERE topic=? AND user_id=? ORDER BY date ASC", (topic, user_id))
+            else:
+                cursor.execute("SELECT * FROM confidence_history WHERE user_id=? ORDER BY date ASC", (user_id,))
         else:
-            cursor.execute("SELECT * FROM confidence_history WHERE user_id=? ORDER BY date ASC", (user_id,))
-    else:
-        if topic:
-            cursor.execute("SELECT * FROM confidence_history WHERE topic=? ORDER BY date ASC", (topic,))
-        else:
-            cursor.execute("SELECT * FROM confidence_history ORDER BY date ASC")
-    rows = cursor.fetchall()
-    conn.close()
+            if topic:
+                cursor.execute("SELECT * FROM confidence_history WHERE topic=? ORDER BY date ASC", (topic,))
+            else:
+                cursor.execute("SELECT * FROM confidence_history ORDER BY date ASC")
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
     return [
         ConfidenceHistoryEntry(
             id=r["id"],
@@ -588,51 +658,55 @@ def db_get_confidence_history(topic: Optional[str] = None, user_id: str = "") ->
 
 def db_get_distinct_topics(user_id: str = "") -> List[str]:
     user_id = user_id or get_current_user()
-    """Get all distinct topics tracked anywhere in Synapse metadata."""
     conn = get_db_connection()
-    cursor = conn.cursor()
-    if user_id:
-        cursor.execute("""
-        SELECT topic FROM confidence_history WHERE user_id=?
-        UNION
-        SELECT topic FROM reconciliation_log WHERE user_id=?
-        UNION
-        SELECT topic FROM conflicts WHERE user_id=?
-        ORDER BY topic
-        """, (user_id, user_id, user_id))
-    else:
-        cursor.execute("""
-        SELECT topic FROM confidence_history
-        UNION
-        SELECT topic FROM reconciliation_log
-        UNION
-        SELECT topic FROM conflicts
-        ORDER BY topic
-        """)
-    rows = cursor.fetchall()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        if user_id:
+            cursor.execute("""
+            SELECT topic FROM confidence_history WHERE user_id=?
+            UNION
+            SELECT topic FROM reconciliation_log WHERE user_id=?
+            UNION
+            SELECT topic FROM conflicts WHERE user_id=?
+            ORDER BY topic
+            """, (user_id, user_id, user_id))
+        else:
+            cursor.execute("""
+            SELECT topic FROM confidence_history
+            UNION
+            SELECT topic FROM reconciliation_log
+            UNION
+            SELECT topic FROM conflicts
+            ORDER BY topic
+            """)
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
     return [r["topic"] for r in rows]
 
 def db_get_timeline_topics(user_id: str = "") -> List[str]:
     user_id = user_id or get_current_user()
-    """Get topics that have actual confidence timeline data."""
     conn = get_db_connection()
-    cursor = conn.cursor()
-    if user_id:
-        cursor.execute("SELECT DISTINCT topic FROM confidence_history WHERE user_id=? ORDER BY topic", (user_id,))
-    else:
-        cursor.execute("SELECT DISTINCT topic FROM confidence_history ORDER BY topic")
-    rows = cursor.fetchall()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        if user_id:
+            cursor.execute("SELECT DISTINCT topic FROM confidence_history WHERE user_id=? ORDER BY topic", (user_id,))
+        else:
+            cursor.execute("SELECT DISTINCT topic FROM confidence_history ORDER BY topic")
+        rows = cursor.fetchall()
+    finally:
+        conn.close()
     return [r["topic"] for r in rows]
 
 # Decay Settings CRUD
 def db_get_decay_settings() -> DecaySettings:
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT decay_start_days, forget_threshold_days FROM decay_settings WHERE id=1")
-    row = cursor.fetchone()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT decay_start_days, forget_threshold_days FROM decay_settings WHERE id=1")
+        row = cursor.fetchone()
+    finally:
+        conn.close()
     return DecaySettings(
         decayStartDays=row["decay_start_days"],
         forgetThresholdDays=row["forget_threshold_days"]
@@ -640,30 +714,33 @@ def db_get_decay_settings() -> DecaySettings:
 
 def db_update_decay_settings(s: DecaySettings):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-    UPDATE decay_settings
-    SET decay_start_days=?, forget_threshold_days=?
-    WHERE id=1
-    """, (s.decayStartDays, s.forgetThresholdDays))
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+        UPDATE decay_settings
+        SET decay_start_days=?, forget_threshold_days=?
+        WHERE id=1
+        """, (s.decayStartDays, s.forgetThresholdDays))
+        conn.commit()
+    finally:
+        conn.close()
 
 def db_reseed(user_id: str = ""):
-    """Unconditionally clear database tables and re-run seed scripts."""
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM db_metadata WHERE key='seeded'")
-    if user_id:
-        cursor.execute("DELETE FROM sources WHERE user_id=?", (user_id,))
-        cursor.execute("DELETE FROM conflicts WHERE user_id=?", (user_id,))
-        cursor.execute("DELETE FROM reconciliation_log WHERE user_id=?", (user_id,))
-        cursor.execute("DELETE FROM confidence_history WHERE user_id=?", (user_id,))
-    else:
-        cursor.execute("DELETE FROM sources")
-        cursor.execute("DELETE FROM conflicts")
-        cursor.execute("DELETE FROM reconciliation_log")
-        cursor.execute("DELETE FROM confidence_history")
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM db_metadata WHERE key='seeded'")
+        if user_id:
+            cursor.execute("DELETE FROM sources WHERE user_id=?", (user_id,))
+            cursor.execute("DELETE FROM conflicts WHERE user_id=?", (user_id,))
+            cursor.execute("DELETE FROM reconciliation_log WHERE user_id=?", (user_id,))
+            cursor.execute("DELETE FROM confidence_history WHERE user_id=?", (user_id,))
+        else:
+            cursor.execute("DELETE FROM sources")
+            cursor.execute("DELETE FROM conflicts")
+            cursor.execute("DELETE FROM reconciliation_log")
+            cursor.execute("DELETE FROM confidence_history")
+        conn.commit()
+    finally:
+        conn.close()
     db_init()

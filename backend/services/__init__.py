@@ -38,11 +38,13 @@ import trafilatura
 from youtube_transcript_api import YouTubeTranscriptApi
 from datetime import datetime, timezone
 from collections import OrderedDict
+import asyncio
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # Per-request user context for data isolation
-from context import set_current_user, get_current_user, _cache_key
+from context import set_current_user, get_current_user, _cache_key as _ctx_cache_key
+_cache_key = _ctx_cache_key
 
 # Load only non-secret config from .env
 from dotenv import load_dotenv
@@ -212,8 +214,8 @@ _cache: OrderedDict[str, tuple[float, str]] = OrderedDict()
 CACHE_MAX = 64
 CACHE_TTL = 300  # 5 minutes
 
-# Rate limiter: max 10 LLM calls per 60 seconds (Groq free tier: 30 req/min for 70b)
-_last_calls: list[float] = []
+# Rate limiter: max 10 LLM calls per 60 seconds per user
+_last_calls: dict[str, list[float]] = {}
 RATE_MAX = 10
 RATE_WINDOW = 60
 
@@ -227,16 +229,18 @@ async def call_llm(prompt: str, system_prompt: str = "You are a precise, analyti
             _cache.move_to_end(cache_key)
             return resp
 
-    # Rate limit: wait if needed
+    # Rate limit: wait if needed (per-user)
     now = time.time()
-    _last_calls[:] = [t for t in _last_calls if now - t < RATE_WINDOW]
-    if len(_last_calls) >= RATE_MAX:
-        sleep_time = _last_calls[0] + RATE_WINDOW - now
+    uid = get_current_user() or "default"
+    user_calls = _last_calls.setdefault(uid, [])
+    user_calls[:] = [t for t in user_calls if now - t < RATE_WINDOW]
+    if len(user_calls) >= RATE_MAX:
+        sleep_time = user_calls[0] + RATE_WINDOW - now
         if sleep_time > 0:
             await asyncio.sleep(sleep_time)
-        _last_calls[:] = [t for t in _last_calls if now + sleep_time - t < RATE_WINDOW] if sleep_time > 0 else []
+        user_calls[:] = [t for t in user_calls if now + sleep_time - t < RATE_WINDOW] if sleep_time > 0 else []
 
-    _last_calls.append(time.time())
+    user_calls.append(time.time())
 
     text = ""
     config = db_get_user_ai_config()
@@ -320,6 +324,8 @@ async def call_llm(prompt: str, system_prompt: str = "You are a precise, analyti
 
 # In-memory jobs status store (short-lived, fine for in-memory)
 jobs: dict[str, dict] = {}
+# Concurrency limit: max 3 background ingestion jobs at once
+_ingest_sem = asyncio.Semaphore(3)
 _ch_counter = 5
 
 def _evict_stale_jobs():
@@ -491,8 +497,15 @@ def fetch_youtube_transcript(url: str) -> str:
         raise ValueError(f"Could not retrieve YouTube transcript: {e}")
 
 
-def fetch_article_content(url: str) -> str:
+def _block_internal_ips(url: str) -> None:
     _validate_url_safety(url)
+    from urllib.parse import urlparse
+    host = urlparse(url).hostname
+    if host and (host.endswith(".internal") or host == "metadata.google.internal"):
+        raise ValueError(f"Blocked request to internal host: {host}")
+
+def fetch_article_content(url: str) -> str:
+    _block_internal_ips(url)
     downloaded = trafilatura.fetch_url(url)
     if not downloaded:
         raise ValueError("Could not download article content")
@@ -502,7 +515,13 @@ def fetch_article_content(url: str) -> str:
     return text
 
 
-async def run_ingest_background(job_id: str, source: Source, req: IngestRequest):
+async def _run_ingest_with_semaphore(job_id: str, source: Source, req: IngestRequest, user_id: str = ""):
+    async with _ingest_sem:
+        await run_ingest_background(job_id, source, req, user_id)
+
+async def run_ingest_background(job_id: str, source: Source, req: IngestRequest, user_id: str = ""):
+    if user_id:
+        set_current_user(user_id)
     try:
         content = ""
         file_path_to_remember = None
@@ -571,6 +590,12 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest)
 
         # Mark source ready as soon as Cognee finishes, even if reconciliation is still running
         await cognee_task
+        # Clean up temp PDF file after Cognee ingestion
+        if file_path_to_remember and os.path.exists(file_path_to_remember):
+            try:
+                os.remove(file_path_to_remember)
+            except OSError:
+                pass
         source.status = "ready"
         source.lastSyncedAt = datetime.now(timezone.utc).isoformat()
         db_save_source(source)
@@ -617,7 +642,8 @@ async def ingest_source(req: IngestRequest) -> IngestResponse:
     _evict_stale_jobs()
 
     # Run the actual heavy lifting in the background
-    asyncio.create_task(run_ingest_background(job_id, source, req))
+    uid = get_current_user()
+    asyncio.create_task(_run_ingest_with_semaphore(job_id, source, req, uid))
 
     return IngestResponse(jobId=job_id, status="started")
 
@@ -747,7 +773,10 @@ async def get_graph_snapshot() -> GraphSnapshot:
     if COGNEE_READY:
         apply_cognee_llm_config()
         try:
-            nodes, edges = await cognee.get_memory_provenance_graph(include_memory=True)
+            nodes, edges = await cognee.get_memory_provenance_graph(
+                include_memory=True,
+                datasets=[get_cognee_dataset()],
+            )
             mapped_nodes = []
             seen_nodes = set()
             for n in nodes:
@@ -1021,6 +1050,46 @@ def get_ask_topics() -> dict[str, list[str]]:
     return result
 
 
+async def generate_ask_questions() -> list[str]:
+    sources = db_get_sources()
+    if not sources:
+        return []
+
+    topics = db_get_distinct_topics()
+    if not topics:
+        return []
+
+    source_labels = [s.label for s in sources if s.label]
+    summary_parts = []
+    if source_labels:
+        summary_parts.append("Ingested sources: " + ", ".join(source_labels[:10]))
+    if topics:
+        summary_parts.append("Topics in knowledge graph: " + ", ".join(topics[:10]))
+
+    context = ". ".join(summary_parts)
+    if not context:
+        return []
+
+    prompt = (
+        f"You are a helpful assistant helping a user explore their personal knowledge graph.\n\n"
+        f"Here is what the user has imported:\n{context}\n\n"
+        f"Generate exactly 3 concise, insightful questions the user might want to ask about their knowledge. "
+        f"Questions should probe for insights, changes over time, relationships between topics, "
+        f"or decisions made. Output ONLY a JSON array of 3 strings, no other text.\n\n"
+        f"Example: [\"What changed about Topic X?\", \"How does Topic Y relate to Topic Z?\", "
+        f"\"What decisions have I made about Topic W?\"]"
+    )
+    try:
+        raw = await call_llm(prompt, system_prompt="You are a precise analytical assistant.", use_cache=False)
+        raw = raw.strip().strip("```json").strip("```").strip()
+        questions = json.loads(raw)
+        if not isinstance(questions, list) or len(questions) == 0:
+            return []
+        return [str(q).strip() for q in questions[:3]]
+    except Exception:
+        return topics[:3] if topics else []
+
+
 _commits_cache: dict[str, tuple[float, str]] = {}
 COMMITS_CACHE_TTL = 300  # 5 minutes
 
@@ -1131,15 +1200,19 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
     if HAS_LLM:
         sys_prompt = (
             "You are Synapse, an AI knowledge-graph assistant. "
-            "Answer the user's question based ONLY on the provided knowledge graph context below. "
-            "When asked about a specific ingested source (e.g. a chat session), read its full Content: field and summarize the actual conversation — what topics were discussed, what decisions were made, what the key takeaways are. "
-            "Be specific — quote or paraphrase actual lines from the content. "
-            "If the context doesn't contain enough information, say so honestly."
+            "You have access to the user's knowledge graph context below. "
+            "When the user asks about their knowledge, sources, or project details, "
+            "answer based on the provided knowledge graph context. Be specific — "
+            "quote or paraphrase actual content. "
+            "When the user sends a greeting, general chat, or asks something unrelated "
+            "to the knowledge graph, respond naturally and conversationally. "
+            "You are a helpful assistant that can do both — you don't need to force "
+            "every answer to come from the knowledge graph."
         )
         user_prompt = (
+            f"The following is the user's knowledge graph context:\n"
             f"{chr(10).join(graph_ctx_lines)}\n\n"
-            f"User question: {req.query}\n\n"
-            f"Provide a natural, conversational answer. Reference specific sources, dates, and actual details from the content."
+            f"User message: {req.query}"
         )
         llm_answer = await call_llm(user_prompt, system_prompt=sys_prompt)
     else:
@@ -1147,7 +1220,7 @@ async def answer_query(req: RecallRequest) -> ChatMessage:
 
     if not llm_answer:
         if not db_sources:
-            answer = "I don't have any sources ingested yet. Please add a source under 'Add Memory' to ask questions about your project."
+            answer = "I don't have any sources ingested yet. Please add a source under 'Add Memory' to ask questions about your knowledge graph."
         else:
             source_labels = ", ".join(f"'{s.label}'" for s in db_sources)
             answer = f"I've searched your active sources ({source_labels}) but couldn't find specific information to answer your question. Could you rephrase it or check the source content?"
@@ -1439,7 +1512,9 @@ async def resolve_conflict(req: ResolveRequest) -> None:
             return
 
 
-async def run_decay_check() -> DecayResult:
+async def run_decay_check(user_id: str = "") -> DecayResult:
+    if user_id:
+        set_current_user(user_id)
     memory_cache.invalidate(_cache_key("graph_snapshot"))
     now_dt = datetime.now(timezone.utc)
     now = now_dt.isoformat()
@@ -1447,9 +1522,9 @@ async def run_decay_check() -> DecayResult:
     forgotten = 0
     
     settings = db_get_decay_settings()
-    db_conflicts = db_get_conflicts(include_resolved=True)
+    db_conflicts = db_get_conflicts(include_resolved=True, user_id=user_id)
     
-    all_history = db_get_confidence_history()
+    all_history = db_get_confidence_history(user_id=user_id)
     history_by_topic: dict[str, list] = {}
     for entry in all_history:
         history_by_topic.setdefault(entry.topic, []).append(entry)
@@ -1793,6 +1868,9 @@ def _validate_url_safety(url: str) -> None:
             raise ValueError(f"Blocked request to private/internal IP: {ip}")
         if addr.is_multicast or addr.is_reserved:
             raise ValueError(f"Blocked request to reserved IP: {ip}")
+        # Block cloud metadata IPs
+        if ip.startswith("169.254."):
+            raise ValueError(f"Blocked request to link-local metadata IP: {ip}")
 
 
 async def import_chat_from_url(url: str, label: str | None = None) -> dict:
@@ -1804,7 +1882,7 @@ async def import_chat_from_url(url: str, label: str | None = None) -> dict:
     platform = _detect_chat_platform(url)
     display_label = label or f"{platform.title()} Chat"
 
-    _validate_url_safety(url)
+    _block_internal_ips(url)
 
     # Use httpx to fetch the page with a browser-like User-Agent
     headers = {
@@ -1816,10 +1894,15 @@ async def import_chat_from_url(url: str, label: str | None = None) -> dict:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True, max_redirects=5) as client:
             resp = await client.get(url, headers=headers)
             resp.raise_for_status()
-            html = resp.text
+            # Limit response body to prevent OOM from large pages
+            content_bytes = await resp.aread()
+            MAX_SIZE = 5 * 1024 * 1024  # 5 MB
+            if len(content_bytes) > MAX_SIZE:
+                return {"status": "error", "error": "Page content too large"}
+            html = content_bytes.decode("utf-8", errors="replace")
     except httpx.HTTPStatusError as e:
         if e.response.status_code in (401, 403):
             return {

@@ -61,7 +61,7 @@ export default function ProvenancePage() {
         onLoad={() => setLoaded(true)}
         className={`w-full h-full border-0 transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"}`}
         title="Memory Provenance"
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-same-origin"
       />
     </div>
   );

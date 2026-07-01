@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
 async function handleProxy(request: NextRequest, pathArray: string[]) {
+  const session = await auth();
+
   let backendUrl = process.env.COGNEE_API_URL || process.env.NEXT_PUBLIC_COGNEE_API_URL;
   if (!backendUrl && process.env.VERCEL_URL) {
     backendUrl = `https://${process.env.VERCEL_URL}/backend`;
@@ -13,11 +15,8 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
   const url = new URL(`${backendUrl}/${path}`);
   url.search = request.nextUrl.search;
 
-  const headers = new Headers(request.headers);
-  headers.delete("host");
-  headers.delete("cookie");
-  headers.delete("authorization");
-  headers.delete("set-cookie");
+  const headers = new Headers();
+  headers.set("Content-Type", request.headers.get("Content-Type") || "application/json");
 
   // Forward the shared access key so the backend authenticates requests from the proxy
   const accessKey = process.env.SYNAPSE_ACCESS_KEY;
@@ -26,7 +25,6 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
   }
 
   // Thread session user ID to backend for per-user data routing
-  const session = await auth();
   if (session?.user?.id) {
     headers.set("X-User-Id", session.user.id);
   }

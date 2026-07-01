@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
   }
 
   const [sid, signature] = parts;
-  const hmac = crypto.createHmac("sha256", process.env.AUTH_SECRET || "fallback-dev-only");
+  if (!process.env.AUTH_SECRET) {
+    return NextResponse.json({ authenticated: false, error: "Server misconfigured" }, { status: 500 });
+  }
+  const hmac = crypto.createHmac("sha256", process.env.AUTH_SECRET);
   hmac.update(sid);
   const expected = hmac.digest("hex");
 

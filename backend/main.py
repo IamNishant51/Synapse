@@ -37,6 +37,7 @@ from services import (
     get_sources,
     search_nodes,
     generate_node_summary,
+    generate_ask_questions,
     forget_node,
     forget_source,
     reset_demo_data,
@@ -53,14 +54,18 @@ from services import (
 
 limiter = Limiter(key_func=get_remote_address)
 
-async def verify_llm_authorization(x_synapse_key: str = Header(None)):
-    user_config = await asyncio.to_thread(db_get_user_ai_config)
-    if user_config and user_config.get("provider") and user_config.get("model"):
-        return  # BYOK is configured, bypass access key checks
+async def verify_llm_authorization(x_synapse_key: str = Header(None), x_user_id: str = Header(default="")):
     secret = os.environ.get("SYNAPSE_ACCESS_KEY")
     is_dev = os.environ.get("ENVIRONMENT", "production") == "development"
-    if not secret and not is_dev:
+
+    # In dev mode, allow requests with a user ID (from the proxy)
+    if is_dev and x_user_id:
+        return
+
+    # In production, always require the access key
+    if not secret:
         raise HTTPException(status_code=500, detail="Server misconfigured: Access keys not configured")
+
     allowed_keys = {k for k in (secret,) if k}
     if x_synapse_key not in allowed_keys:
         raise HTTPException(status_code=403, detail="Access key required.")
@@ -136,8 +141,11 @@ class ChatUrlImportRequest(BaseModel):
 
 
 @app.post("/import/chat-url")
-async def import_chat_url_route(req: ChatUrlImportRequest, _auth=Depends(verify_llm_authorization)):
+async def import_chat_url_route(req: ChatUrlImportRequest, request: Request, _auth=Depends(verify_llm_authorization)):
     try:
+        user_id = request.headers.get("X-User-Id", "")
+        if user_id:
+            set_current_user(user_id)
         result = await import_chat_from_url(url=req.url, label=req.label)
         return result
     except Exception as e:
@@ -179,6 +187,10 @@ async def recall(request: Request, req: RecallRequest, _auth=Depends(verify_llm_
 async def ask_topics(_auth=Depends(verify_llm_authorization)):
     return get_ask_topics()
 
+@app.get("/ask-questions")
+async def ask_questions(_auth=Depends(verify_llm_authorization)):
+    return await generate_ask_questions()
+
 
 @app.get("/reconciliation/events")
 async def reconciliation_events(_auth=Depends(verify_llm_authorization)):
@@ -192,8 +204,9 @@ async def reconciliation_resolve(req: ResolveRequest, _auth=Depends(verify_llm_a
 
 
 @app.post("/decay/run")
-async def decay_run(_auth=Depends(verify_llm_authorization)):
-    return await run_decay_check()
+async def decay_run(request: Request, _auth=Depends(verify_llm_authorization)):
+    user_id = request.headers.get("X-User-Id", "")
+    return await run_decay_check(user_id=user_id)
 
 
 @app.get("/decay/settings")

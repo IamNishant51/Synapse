@@ -25,7 +25,8 @@ const SectionLabel = ({ text, color = "bg-[#f4c5a8]" }: { text: string; color?: 
   </div>
 );
 
-const BrowserChrome = ({ children, className = "", url = "localhost:3000" }: { children: React.ReactNode; className?: string; url?: string }) => (
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "localhost:3000";
+const BrowserChrome = ({ children, className = "", url = BASE_URL }: { children: React.ReactNode; className?: string; url?: string }) => (
   <div className={`w-full bg-[var(--color-canvas)] rounded-2xl border border-[var(--color-hairline)] shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden ${className}`}>
     <div className="bg-[var(--color-surface-strong)] px-4 py-2.5 border-b border-[var(--color-hairline)] flex items-center gap-1.5 select-none pointer-events-none">
       <div className="w-2.5 h-2.5 rounded-full bg-[#ef4444]/40" />
@@ -669,7 +670,7 @@ export default function LandingPage() {
 
           {/* Hero: Real product screenshot in browser frame — per Part 2 */}
           <div className="fade-up md:col-span-7 hidden md:block w-full relative z-10 self-center">
-            <BrowserChrome url="localhost:3000/resolve" className="shadow-[0_8px_40px_rgba(0,0,0,0.06)]">
+            <BrowserChrome url={`${BASE_URL}/resolve`} className="shadow-[0_8px_40px_rgba(0,0,0,0.06)]">
               <Image
                 src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/resolve_screenshot.jpg"
                 alt="Synapse Resolve — conflict reconciliation screen"
@@ -1146,7 +1147,7 @@ export default function LandingPage() {
 
             {/* Real Screenshot with Browser Frame */}
             <div id="resolve-screenshot-wrapper" className="mt-8 w-full max-w-[460px] opacity-0 relative z-20">
-              <BrowserChrome url="localhost:3000/resolve">
+              <BrowserChrome url={`${BASE_URL}/resolve`}>
                 <Image
                   src="https://ik.imagekit.io/9pfz6g8ri/Synapse_assets/resolve_screenshot.jpg"
                   alt="Synapse Resolve Screen"
@@ -1292,7 +1293,7 @@ export default function LandingPage() {
 
           {/* Right Column: Settings screenshot */}
           <div className="md:col-span-6 flex justify-center items-center">
-            <BrowserChrome url="localhost:3000/settings">
+            <BrowserChrome url={`${BASE_URL}/settings`}>
               <div className="p-6 bg-[var(--color-surface-card)] font-sans select-none pointer-events-none">
                 <div className="text-[10px] uppercase tracking-wider text-[var(--color-muted)] font-semibold mb-4 border-b border-[var(--color-hairline)] pb-3">
                   Memory Insights

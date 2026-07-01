@@ -9,5 +9,5 @@ def get_current_user() -> str:
     return _current_user.get()
 
 def _cache_key(key: str) -> str:
-    uid = get_current_user()
-    return f"{uid}:{key}" if uid else key
+    uid = get_current_user() or "anonymous"
+    return f"{uid}:{key}"

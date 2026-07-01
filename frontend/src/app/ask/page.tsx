@@ -5,34 +5,11 @@ import { useRef, useEffect, useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import SourcePill from "@/components/SourcePill";
 import { useChat } from "@/context/ChatContext";
-import { getAskTopics, getConflictEvents } from "@/lib/api";
+import { getConflictEvents, getAskQuestions } from "@/lib/api";
 import type { DiffCard, TimelinePoint, ConnectionMap, ConflictEvent } from "@/lib/types";
 import { useAIConfig } from "@/context/AIConfigContext";
 
-const fallbackPromptChips = [
-  "What changed about Canvas Theme?",
-  "What did I believe about Canvas Theme before vs now?",
-  "What decisions have I made about Backend Security?",
-];
-
-function buildPromptChips(trackedTopics: string[], timelineTopics: string[]) {
-  const chips: string[] = [];
-
-  if (trackedTopics[0]) {
-    chips.push(`What changed about ${trackedTopics[0]}?`);
-  }
-  if (timelineTopics[0]) {
-    chips.push(`What did I believe about ${timelineTopics[0]} before vs now?`);
-  }
-  if (trackedTopics[1]) {
-    chips.push(`What decisions have I made about ${trackedTopics[1]}?`);
-  }
-  if (trackedTopics[2]) {
-    chips.push(`What changed about ${trackedTopics[2]}?`);
-  }
-
-  return chips.length > 0 ? chips.slice(0, 3) : fallbackPromptChips;
-}
+const fallbackPromptChips: string[] = [];
 
 function DiffCardView({ diff }: { diff: DiffCard }) {
   return (
@@ -353,13 +330,15 @@ export default function AskPage() {
 
     const loadPromptChips = async () => {
       try {
-        const { trackedTopics, timelineTopics } = await getAskTopics();
-        if (!cancelled) {
-          setPromptChips(buildPromptChips(trackedTopics, timelineTopics));
+        const questions = await getAskQuestions();
+        if (!cancelled && Array.isArray(questions) && questions.length > 0) {
+          setPromptChips(questions);
+        } else {
+          setPromptChips([]);
         }
       } catch {
         if (!cancelled) {
-          setPromptChips(fallbackPromptChips);
+          setPromptChips([]);
         }
       }
     };

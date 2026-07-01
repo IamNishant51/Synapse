@@ -16,7 +16,7 @@ const garamond = EB_Garamond({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://synapse-knowledge.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://synapse-knowledge.vercel.app"),
   title: "Synapse — A memory that knows when to update itself",
   description: "A self-organizing personal knowledge graph that ingests everything you read, write, and build — and actively maintains itself.",
   manifest: "/site.webmanifest",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Synapse — A memory that knows when to update itself",
     description: "A self-organizing personal knowledge graph built on Cognee's memory lifecycle.",
-    url: "https://synapse-knowledge.vercel.app",
+    url: process.env.NEXT_PUBLIC_APP_URL || "https://synapse-knowledge.vercel.app",
     siteName: "Synapse",
     images: [
       {

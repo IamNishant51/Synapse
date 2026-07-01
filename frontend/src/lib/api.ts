@@ -136,6 +136,10 @@ export async function getAskTopics(): Promise<{ trackedTopics: string[]; timelin
   return cachedFetch<{ trackedTopics: string[]; timelineTopics: string[] }>("/topics", 60_000);
 }
 
+export async function getAskQuestions(): Promise<string[]> {
+  return fetchAPI<string[]>("/ask-questions");
+}
+
 export async function runDecayCheck(): Promise<{ forgotten: number; decayed: number }> {
   const result = await fetchAPI<{ forgotten: number; decayed: number }>("/decay/run", {
     method: "POST",
