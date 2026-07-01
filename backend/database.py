@@ -350,6 +350,7 @@ def db_delete_user_ai_config():
 
 # Sources CRUD
 def db_save_source(s: Source, user_id: str = ""):
+    user_id = user_id or get_current_user()
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -376,7 +377,7 @@ def db_get_sources(user_id: str = "") -> List[Source]:
         pass
 
     if user_id:
-        cursor.execute("SELECT * FROM sources WHERE user_id = ? ORDER BY ingested_at DESC", (user_id,))
+        cursor.execute("SELECT * FROM sources WHERE user_id = ? OR user_id = '' ORDER BY ingested_at DESC", (user_id,))
     else:
         cursor.execute("SELECT * FROM sources ORDER BY ingested_at DESC")
     rows = cursor.fetchall()
