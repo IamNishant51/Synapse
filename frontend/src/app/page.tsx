@@ -532,10 +532,6 @@ export default function LandingPage() {
                     </>
                   )}
                 </div>
-                <button onClick={enter}
-                  className="px-5 py-2.5 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[15px] font-medium hover:bg-[var(--color-ink)] transition-all duration-300 cursor-pointer">
-                  Open App
-                </button>
               </div>
             ) : (
               <a href="/settings" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">Sign In</a>
@@ -597,10 +593,6 @@ export default function LandingPage() {
                     {session.user?.name?.charAt(0) || "U"}
                   </span>
                   Sign out
-                </button>
-                <button onClick={enter}
-                  className="px-4 py-2 rounded-full bg-[var(--color-primary)] text-[var(--color-on-primary)] text-[14px] font-medium hover:bg-[var(--color-ink)] transition-all duration-300">
-                  Open App
                 </button>
               </div>
             ) : (
