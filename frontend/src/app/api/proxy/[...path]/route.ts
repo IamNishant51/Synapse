@@ -30,9 +30,19 @@ async function handleProxy(request: NextRequest, pathArray: string[]) {
   }
 
   try {
+    const MAX_BODY = 12 * 1024 * 1024; // 12 MB
+    const contentLength = request.headers.get("content-length");
+    if (contentLength && parseInt(contentLength) > MAX_BODY) {
+      return NextResponse.json({ error: "Request body too large" }, { status: 413 });
+    }
+
     const requestBody = request.method !== "GET" && request.method !== "HEAD" 
       ? await request.arrayBuffer() 
       : undefined;
+
+    if (requestBody && requestBody.byteLength > MAX_BODY) {
+      return NextResponse.json({ error: "Request body too large" }, { status: 413 });
+    }
 
     const res = await fetch(url.toString(), {
       method: request.method,

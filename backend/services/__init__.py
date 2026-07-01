@@ -454,25 +454,46 @@ async def fetch_github_repo_content(repo_url: str, path_filter: Optional[str] = 
 
 
 async def save_base64_pdf(content_str: str, label: str) -> str:
-    tmp_dir = os.path.join(os.path.dirname(__file__), "tmp_uploads")
-    os.makedirs(tmp_dir, exist_ok=True)
-    
+    import tempfile
+
     if "," in content_str:
         header, base64_data = content_str.split(",", 1)
     else:
         base64_data = content_str
-        
+
     pdf_bytes = base64.b64decode(base64_data)
-    
+
+    MAX_PDF_SIZE = 10 * 1024 * 1024  # 10 MB
+    if len(pdf_bytes) > MAX_PDF_SIZE:
+        raise ValueError(f"PDF exceeds maximum size of {MAX_PDF_SIZE // (1024*1024)} MB")
+
+    # Validate PDF magic bytes
+    if not pdf_bytes.startswith(b"%PDF-"):
+        raise ValueError("File is not a valid PDF (missing PDF header)")
+
+    # Validate PDF structure with PyMuPDF
+    try:
+        import fitz
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        page_count = doc.page_count
+        doc.close()
+    except Exception as e:
+        raise ValueError(f"PDF parsing failed: {e}")
+
+    # Write to secure random temp file
+    tmp_dir = os.path.join(os.path.dirname(__file__), "tmp_uploads")
+    os.makedirs(tmp_dir, exist_ok=True)
+
     safe_label = "".join(c for c in label if c.isalnum() or c in (".", "_", "-")).rstrip()
     if not safe_label.endswith(".pdf"):
         safe_label += ".pdf"
-        
-    file_path = os.path.join(tmp_dir, safe_label)
-    
+
+    fd, file_path = tempfile.mkstemp(dir=tmp_dir, suffix=".pdf", prefix="")
+    os.close(fd)
+
     with open(file_path, "wb") as f:
         f.write(pdf_bytes)
-        
+
     return file_path
 
 
@@ -522,9 +543,9 @@ async def _run_ingest_with_semaphore(job_id: str, source: Source, req: IngestReq
 async def run_ingest_background(job_id: str, source: Source, req: IngestRequest, user_id: str = ""):
     if user_id:
         set_current_user(user_id)
+    file_path_to_remember = None
     try:
         content = ""
-        file_path_to_remember = None
         
         if req.type == "github":
             if not req.url:
@@ -570,7 +591,6 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest,
                 except asyncio.TimeoutError:
                     print("[Cognee] cognify timed out, proceeding", flush=True)
                 
-                # Call Cognee's native memify pipeline to enrich knowledge graph memory
                 try:
                     await asyncio.wait_for(cognee.memify(dataset=get_cognee_dataset()), timeout=10.0)
                     log_cognee_activity("memify()", f"Indexed concepts and relation structures for '{req.label}'")
@@ -588,20 +608,12 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest,
         cognee_task = asyncio.create_task(do_cognee())
         recon_task = asyncio.create_task(do_reconciliation())
 
-        # Mark source ready as soon as Cognee finishes, even if reconciliation is still running
         await cognee_task
-        # Clean up temp PDF file after Cognee ingestion
-        if file_path_to_remember and os.path.exists(file_path_to_remember):
-            try:
-                os.remove(file_path_to_remember)
-            except OSError:
-                pass
         source.status = "ready"
         source.lastSyncedAt = datetime.now(timezone.utc).isoformat()
         db_save_source(source)
         _touch_job(job_id, currentStep="reconcile", progress=80)
 
-        # Reconciliation is best-effort — don't fail the source if it errors
         try:
             await recon_task
             _touch_job(job_id, progress=100, status="completed")
@@ -613,6 +625,12 @@ async def run_ingest_background(job_id: str, source: Source, req: IngestRequest,
         source.status = "failed"
         db_save_source(source)
         _touch_job(job_id, status="failed", error=str(e))
+    finally:
+        if file_path_to_remember and os.path.exists(file_path_to_remember):
+            try:
+                os.remove(file_path_to_remember)
+            except OSError:
+                pass
 
 
 async def ingest_source(req: IngestRequest) -> IngestResponse:
