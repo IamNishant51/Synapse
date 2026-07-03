@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: "https://synapse-knowledge.vercel.app",
+      url: "https://synapse-memory.vercel.app",
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1.0,

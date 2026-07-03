@@ -10,13 +10,13 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/IamNishant51/Synapse-Ai/actions/workflows/ci.yml/badge.svg)](https://github.com/IamNishant51/Synapse-Ai/actions/workflows/ci.yml)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+**[Live Demo](https://synapse-memory.vercel.app)** |
 
-**[Live Demo](https://synapse-knowledge.vercel.app)** |
 **Built by [Nishant Unavane](https://nishantunavane.qzz.io)**
 
 ## Quick Access
 
-**Live demo:** [https://synapse-knowledge.vercel.app](https://synapse-knowledge.vercel.app)
+**Live demo:** [https://synapse-memory.vercel.app](https://synapse-memory.vercel.app)
 
 Sign in with GitHub or Google to access the full experience — your knowledge graph and conversations are saved to your account. A **"View demo without signing in"** link is available on the login page for judges and exploration of seed data. For AI features (querying, ingestion, memory reconciliation), click **"Configure AI"** in Settings and bring your own API key after signing in.
 
