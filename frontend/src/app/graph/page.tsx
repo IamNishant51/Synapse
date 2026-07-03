@@ -336,16 +336,12 @@ export default function GraphPage() {
   // Sync graph background with theme changes
   useEffect(() => {
     const bg = cssVar("--color-canvas");
-    if (use2d && fg2dRef.current) {
-      const canvas = fg2dRef.current.renderer();
-      if (canvas) {
-        canvas.parentNode ? canvas.parentNode.style.background = bg : canvas.style.background = bg;
-      }
-    } else if (!use2d && fg3dRef.current) {
+    if (use2d) {
+      const canvas = containerRef.current?.querySelector("canvas");
+      if (canvas) canvas.style.background = bg;
+    } else if (fg3dRef.current) {
       const scene = fg3dRef.current.scene();
-      if (scene) {
-        scene.background = new THREE.Color(bg);
-      }
+      if (scene) scene.background = new THREE.Color(bg);
     }
   }, [resolvedTheme, use2d]);
 
