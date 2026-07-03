@@ -1,0 +1,12 @@
+name: Keep Railway Awake
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Railway backend
+        run: curl -sSf -o /dev/null https://synapse-api-production-5fa4.up.railway.app/health
