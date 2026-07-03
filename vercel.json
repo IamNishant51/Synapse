@@ -9,7 +9,8 @@
       "src": "backend/main.py",
       "use": "@vercel/python",
       "config": {
-        "maxDuration": 300
+        "maxDuration": 300,
+        "excludeFiles": "frontend/node_modules/**"
       }
     }
   ],
