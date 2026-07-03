@@ -230,7 +230,7 @@ function GraphLoadingSkeleton() {
 export default function GraphPage() {
   const router = useRouter();
   const { config, loading: loadingAI, openModal } = useAIConfig();
-  useTheme();
+  const { resolvedTheme } = useTheme();
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
@@ -332,6 +332,22 @@ export default function GraphPage() {
     observer.observe(containerRef.current);
     return () => observer.disconnect();
   }, []);
+
+  // Sync graph background with theme changes
+  useEffect(() => {
+    const bg = cssVar("--color-canvas");
+    if (use2d && fg2dRef.current) {
+      const canvas = fg2dRef.current.renderer();
+      if (canvas) {
+        canvas.parentNode ? canvas.parentNode.style.background = bg : canvas.style.background = bg;
+      }
+    } else if (!use2d && fg3dRef.current) {
+      const scene = fg3dRef.current.scene();
+      if (scene) {
+        scene.background = new THREE.Color(bg);
+      }
+    }
+  }, [resolvedTheme, use2d]);
 
   const { addToast } = useToast();
 
