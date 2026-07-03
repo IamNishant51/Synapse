@@ -1,0 +1,27 @@
+AGENTS.md
+SYNAPSE_IMPROVEMENT.md
+cognee_hackathon.md
+.gitignore
+run.md
+things_to_do_in_ui.md
+SYNAPSE_REFINEMENT.md
+frontend/AGENTS.md
+frontend/CLAUDE.md
+frontend/README.md
+SYNAPSE_IMPROVEMENT.md
+SYNAPSE_NEW_FEATURES.md
+PLAN.md
+Docs
+new_features_plan.md
+AUDIT.md
+
+# Secrets — never commit
+.env
+.env.local
+.env.production
+.env.development
+*.env.local
+.vercel
+.env*
+.railway
+backend/.railway/
