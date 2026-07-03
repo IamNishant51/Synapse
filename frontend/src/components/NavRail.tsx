@@ -85,8 +85,13 @@ export default function NavRail() {
         })}
       </nav>
       ) : status === "loading" ? (
-      <div className="flex flex-col items-center justify-center flex-1 px-4">
-        <span className="w-5 h-5 border-2 border-muted-soft border-t-ink rounded-full animate-spin" />
+      <div className="flex flex-col gap-2 w-full px-3 pt-4">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg animate-pulse">
+            <div className="w-4 h-4 rounded bg-surface-strong" />
+            <div className="h-3 rounded bg-surface-strong" style={{ width: `${60 + (i % 3) * 20}%` }} />
+          </div>
+        ))}
       </div>
       ) : (
       <div className="flex flex-col items-center justify-center flex-1 px-4 text-center">
