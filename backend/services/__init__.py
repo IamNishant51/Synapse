@@ -798,16 +798,41 @@ async def get_graph_snapshot() -> GraphSnapshot:
     cached = memory_cache.get(_cache_key("graph_snapshot"))
     if cached is not None:
         return cached
-    # Try to fetch real graph data from Cognee first
-    if COGNEE_READY:
+    # Fetch the user's own data to scope the graph
+    user_sources = db_get_sources()
+    user_conflicts = db_get_conflicts(include_resolved=True)
+
+    # Try to enrich with Cognee's graph, but ONLY include nodes matching the user's data
+    if COGNEE_READY and (user_sources or user_conflicts):
         apply_cognee_llm_config()
         try:
-            nodes, edges = await cognee.get_memory_provenance_graph(
+            cognee_nodes, cognee_edges = await cognee.get_memory_provenance_graph(
                 include_memory=True,
             )
+            # Build a set of terms from the user's own sources to filter Cognee results
+            user_terms: set[str] = set()
+            for s in user_sources:
+                for word in s.label.lower().split():
+                    if len(word) > 3:
+                        user_terms.add(word)
+                if s.url:
+                    for word in s.url.lower().replace("://", " ").replace("/", " ").split():
+                        if len(word) > 3:
+                            user_terms.add(word)
+            for c in user_conflicts:
+                for word in c.topic.lower().split():
+                    if len(word) > 3:
+                        user_terms.add(word)
+                for word in c.newNodeSummary.lower().split():
+                    if len(word) > 3:
+                        user_terms.add(word)
+                for word in c.oldNodeSummary.lower().split():
+                    if len(word) > 3:
+                        user_terms.add(word)
+
             mapped_nodes = []
             seen_nodes = set()
-            for n in nodes:
+            for n in cognee_nodes:
                 node_id = str(n.id)
                 if node_id in seen_nodes:
                     continue
@@ -816,9 +841,19 @@ async def get_graph_snapshot() -> GraphSnapshot:
                 if node_type in ("User", "Dataset", "Session", "TextDocument", "Document"):
                     continue
                 node_name = n.properties.get("name") or n.properties.get("text") or "Entity"
+
+                # Only include nodes that match the user's data
+                node_lower = str(node_name).lower()
+                node_type_lower = str(node_type).lower()
+                if user_terms and not any(
+                    term in node_lower or term in node_type_lower
+                    for term in user_terms
+                ):
+                    continue
+
                 label = f"{node_name} ({node_type})" if node_type != "Entity" else node_name
                 summary = f"{node_type}: {node_name}"
-                connection_count = sum(1 for e in edges if e.source == node_id or e.target == node_id)
+                connection_count = sum(1 for e in cognee_edges if e.source == node_id or e.target == node_id)
                 mapped_nodes.append(GraphNode(
                     id=node_id,
                     label=label[:40],
@@ -831,13 +866,15 @@ async def get_graph_snapshot() -> GraphSnapshot:
                     isDecisionType=True if node_type == "Entity" else False
                 ))
             mapped_edges = []
-            for e in edges:
-                mapped_edges.append(GraphEdge(
-                    source=str(e.source),
-                    target=str(e.target),
-                    relationship=str(e.relation),
-                    confidence=0.8
-                ))
+            node_ids = {n.id for n in mapped_nodes}
+            for e in cognee_edges:
+                if e.source in node_ids and e.target in node_ids:
+                    mapped_edges.append(GraphEdge(
+                        source=str(e.source),
+                        target=str(e.target),
+                        relationship=str(e.relation),
+                        confidence=0.8
+                    ))
             if mapped_nodes:
                 MAX_NODES = 300
                 if len(mapped_nodes) > MAX_NODES:
@@ -855,8 +892,8 @@ async def get_graph_snapshot() -> GraphSnapshot:
     seen_labels: set[str] = set()
     nodes: list[GraphNode] = []
     edges: list[GraphEdge] = []
-    db_conflicts = db_get_conflicts(include_resolved=True)
-    db_sources = db_get_sources()
+    db_conflicts = user_conflicts
+    db_sources = user_sources
 
     # 1. Build nodes and edges from conflicts
     conflict_node_map = {}
