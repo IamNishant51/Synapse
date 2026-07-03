@@ -410,11 +410,38 @@ export default function LandingPage() {
                duration: 1.2 
              }, 0)
              .to("#decay-bar-supabase", { width: "95%", duration: 1.2 }, 0)
-             .to("#decay-score-supabase", { 
-               innerText: "0.95", 
-               snap: { innerText: 1 }, 
-               duration: 1.2 
-             }, 0);
+              .to("#decay-score-supabase", { 
+                innerText: "0.95", 
+                snap: { innerText: 1 }, 
+                duration: 1.2 
+              }, 0);
+
+      /* ── Feature cards entrance ── */
+      gsap.set(".pipeline-heading", { y: 20, opacity: 0 });
+      gsap.set(".pipeline-card", { y: 30, opacity: 0 });
+      gsap.to(".pipeline-heading", {
+        y: 0,
+        opacity: 1,
+        duration: 0.6,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: "#how-it-works",
+          start: "top 80%",
+          toggleActions: "play none none reverse"
+        }
+      });
+      gsap.to(".pipeline-card", {
+        y: 0,
+        opacity: 1,
+        stagger: 0.12,
+        duration: 0.5,
+        ease: "power2.out",
+        scrollTrigger: {
+          trigger: "#how-it-works",
+          start: "top 75%",
+          toggleActions: "play none none reverse"
+        }
+      });
 
     });
 
@@ -433,6 +460,7 @@ export default function LandingPage() {
       gsap.set("#droplet-gold, #droplet-smoke, #compare-ui-card, #diff-card, #resolve-screenshot-wrapper", { opacity: 0.9, scale: 1, x: 0 });
       gsap.set("#decay-bar-postgres", { width: "12%" });
       gsap.set("#decay-bar-supabase", { width: "95%" });
+      gsap.set(".pipeline-heading, .pipeline-card", { y: 0, opacity: 1 });
     });
   }, { scope: wrapRef });
 
@@ -756,7 +784,7 @@ export default function LandingPage() {
       <section id="how-it-works" className="relative z-10 py-28 px-6 bg-[var(--color-canvas)] border-t border-[var(--color-hairline)]">
         <div className="max-w-[1200px] mx-auto">
           {/* Section heading */}
-          <div className="text-center mb-16">
+          <div className="pipeline-heading text-center mb-16">
             <span className="inline-flex items-center gap-2 text-[10px] font-mono font-semibold text-[var(--color-muted)] tracking-widest bg-[var(--color-surface-strong)] px-3 py-1.5 rounded-full">
               <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -820,7 +848,7 @@ export default function LandingPage() {
             ].map((step) => (
               <div
                 key={step.num}
-                className="relative group flex flex-col rounded-2xl border border-[var(--color-hairline)] bg-[var(--color-surface-card)] overflow-hidden transition-all duration-300 hover:border-[var(--color-ink)]/20 hover:shadow-[0_1px_6px_rgba(0,0,0,0.04)]"
+                className="pipeline-card relative group flex flex-col rounded-2xl border border-[var(--color-hairline)] bg-[var(--color-surface-card)] overflow-hidden transition-all duration-300 hover:border-[var(--color-ink)]/20 hover:shadow-[0_1px_6px_rgba(0,0,0,0.04)]"
               >
                 <div className="relative z-10 p-6 flex flex-col gap-4 h-full">
                   {/* Top row: label + icon */}
