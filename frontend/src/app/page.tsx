@@ -822,11 +822,6 @@ export default function LandingPage() {
                 key={step.num}
                 className="relative group flex flex-col rounded-2xl border border-[var(--color-hairline)] bg-[var(--color-surface-card)] overflow-hidden transition-all duration-300 hover:border-[var(--color-ink)]/20 hover:shadow-[0_1px_6px_rgba(0,0,0,0.04)]"
               >
-                {/* Decorative large step number */}
-                <div className="absolute top-3 right-4 text-[56px] font-mono font-bold leading-none text-[var(--color-hairline-strong)]/30 select-none pointer-events-none">
-                  {step.num}
-                </div>
-
                 <div className="relative z-10 p-6 flex flex-col gap-4 h-full">
                   {/* Top row: label + icon */}
                   <div className="flex items-center justify-between">
