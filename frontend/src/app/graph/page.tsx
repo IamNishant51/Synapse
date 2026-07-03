@@ -24,22 +24,29 @@ interface NodeDetail extends GraphNode {
   z?: number;
 }
 
-function cssVar(name: string): string {
+const THEME_COLORS: Record<string, { light: string; dark: string }> = {
+  "--color-canvas": { light: "#ffffff", dark: "#000000" },
+  "--color-muted-soft": { light: "#a1a1aa", dark: "#52525b" },
+  "--color-conflict-warning": { light: "#f59e0b", dark: "#f59e0b" },
+  "--color-confidence-fresh": { light: "#09090b", dark: "#ffffff" },
+  "--color-confidence-fading": { light: "#52525b", dark: "#a1a1aa" },
+  "--color-confidence-stale": { light: "#d4d4d8", dark: "#52525b" },
+  "--color-hairline": { light: "#e4e4e7", dark: "#27272a" },
+  "--color-hairline-strong": { light: "#d4d4d8", dark: "#3f3f46" },
+  "--color-muted": { light: "#71717a", dark: "#71717a" },
+  "--color-ink": { light: "#09090b", dark: "#ffffff" },
+  "--color-body": { light: "#52525b", dark: "#a1a1aa" },
+  "--color-on-dark": { light: "#ffffff", dark: "#000000" },
+  "--color-semantic-danger": { light: "#ef4444", dark: "#ef4444" },
+};
+
+function getThemeColorGlobal(name: string, theme: "light" | "dark"): string {
+  if (name in THEME_COLORS) {
+    return THEME_COLORS[name as keyof typeof THEME_COLORS][theme];
+  }
   if (typeof document === "undefined") return "#000000";
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || "#000000";
 }
-
-const COLORS = {
-  get active() { return cssVar("--color-confidence-fresh"); },
-  get superseded() { return cssVar("--color-muted"); },
-  get rejected() { return cssVar("--color-semantic-danger"); },
-  get forgotten() { return cssVar("--color-hairline-strong"); },
-  get edge() { return cssVar("--color-hairline"); },
-  get particle() { return cssVar("--color-confidence-fresh"); },
-  get fresh() { return cssVar("--color-confidence-fresh"); },
-  get fading() { return cssVar("--color-confidence-fading"); },
-  get stale() { return cssVar("--color-confidence-stale"); },
-};
 
 function interpolateColor(color1: string, color2: string, factor: number) {
   const r1 = parseInt(color1.substring(1, 3), 16);
@@ -76,12 +83,7 @@ function createGlowTexture() {
   return texture;
 }
 
-function nodeColor(node: GraphNode) {
-  const level = getConfidenceColor(node.confidenceScore);
-  if (level === "fresh") return COLORS.fresh;
-  if (level === "fading") return COLORS.fading;
-  return COLORS.stale;
-}
+
 
 function GraphLoadingSkeleton() {
   const nodes: { cx: number; cy: number; r: number }[] = [
@@ -231,6 +233,74 @@ export default function GraphPage() {
   const router = useRouter();
   const { config, loading: loadingAI, openModal } = useAIConfig();
   const { resolvedTheme } = useTheme();
+
+  const themeKey: "light" | "dark" = resolvedTheme === "dark" ? "dark" : "light";
+
+  const [transitionProgress, setTransitionProgress] = useState(1);
+  const [prevThemeKey, setPrevThemeKey] = useState<"light" | "dark">(themeKey);
+
+  const isTransitioning = themeKey !== prevThemeKey;
+  const currentProgress = isTransitioning ? (transitionProgress === 1 ? 0 : transitionProgress) : 1;
+
+  useEffect(() => {
+    if (themeKey !== prevThemeKey) {
+      const startTime = performance.now();
+      const duration = 300; // 300ms transition duration
+      
+      let animFrameId: number;
+      const animate = (time: number) => {
+        const elapsed = time - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        setTransitionProgress(progress);
+        
+        if (progress < 1) {
+          animFrameId = requestAnimationFrame(animate);
+        } else {
+          setPrevThemeKey(themeKey);
+        }
+      };
+      
+      animFrameId = requestAnimationFrame(animate);
+      return () => cancelAnimationFrame(animFrameId);
+    }
+  }, [themeKey, prevThemeKey]);
+
+  const getThemeColorLocal = useCallback((name: string) => {
+    if (name in THEME_COLORS) {
+      const key = name as keyof typeof THEME_COLORS;
+      const colorStart = THEME_COLORS[key][prevThemeKey];
+      const colorEnd = THEME_COLORS[key][themeKey];
+      if (colorStart === colorEnd || currentProgress === 1) {
+        return colorEnd;
+      }
+      return interpolateColor(colorStart, colorEnd, currentProgress);
+    }
+    return getThemeColorGlobal(name, themeKey);
+  }, [themeKey, prevThemeKey, currentProgress]);
+
+  const cssVar = useCallback((name: string) => {
+    return getThemeColorLocal(name);
+  }, [getThemeColorLocal]);
+
+  const colors = useMemo(() => ({
+    active: cssVar("--color-confidence-fresh"),
+    superseded: cssVar("--color-muted"),
+    rejected: cssVar("--color-semantic-danger"),
+    forgotten: cssVar("--color-hairline-strong"),
+    edge: cssVar("--color-hairline"),
+    particle: cssVar("--color-confidence-fresh"),
+    fresh: cssVar("--color-confidence-fresh"),
+    fading: cssVar("--color-confidence-fading"),
+    stale: cssVar("--color-confidence-stale"),
+  }), [cssVar]);
+
+  const nodeColor = useCallback((node: GraphNode) => {
+    const level = getConfidenceColor(node.confidenceScore);
+    if (level === "fresh") return colors.fresh;
+    if (level === "fading") return colors.fading;
+    return colors.stale;
+  }, [colors]);
+
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [selectedNode, setSelectedNode] = useState<NodeDetail | null>(null);
@@ -343,7 +413,7 @@ export default function GraphPage() {
       const scene = fg3dRef.current.scene();
       if (scene) scene.background = new THREE.Color(bg);
     }
-  }, [resolvedTheme, use2d]);
+  }, [resolvedTheme, use2d, cssVar]);
 
   const { addToast } = useToast();
 
@@ -543,7 +613,7 @@ export default function GraphPage() {
 
       return mesh;
     },
-    [],
+    [nodeColor],
   );
 
   const nodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -625,10 +695,10 @@ export default function GraphPage() {
     ctx.textBaseline = "middle";
     ctx.fillStyle = isSelected ? cssVar("--color-ink") : cssVar("--color-body");
     ctx.fillText(label, node.x, node.y + size * currentScale + 12);
-  }, [hoveredNode, selectedNode]);
+  }, [hoveredNode, selectedNode, nodeColor, cssVar]);
 
   const linkThreeObject = useCallback((link: any) => {
-    const color = link.confidence >= 0.8 ? COLORS.particle : COLORS.edge;
+    const color = link.confidence >= 0.8 ? colors.particle : colors.edge;
     const geo = new THREE.BufferGeometry();
     const points = [
       link.source.x || 0,
@@ -641,7 +711,7 @@ export default function GraphPage() {
     geo.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
     const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.4 });
     return new THREE.Line(geo, mat);
-  }, []);
+  }, [colors]);
 
   const extractType = (label: string): string | null => {
     const match = label.match(/\(([^)]+)\)$/);
@@ -746,7 +816,7 @@ export default function GraphPage() {
                   graphData={graphData}
                   nodeCanvasObject={nodeCanvasObject}
                   linkWidth={(link) => isConnectedToActiveNode(link) ? 1.5 : 0.8}
-                  linkColor={(link) => isConnectedToActiveNode(link) ? COLORS.particle : COLORS.edge}
+                  linkColor={(link) => isConnectedToActiveNode(link) ? colors.particle : colors.edge}
                   linkDirectionalParticles={(link) => isConnectedToActiveNode(link) ? 4 : 1}
                   linkDirectionalParticleSpeed={(link) => isConnectedToActiveNode(link) ? 0.015 : 0.003}
                   linkDirectionalParticleCanvasObject={(x: number, y: number, link: any, ctx: CanvasRenderingContext2D) => {
