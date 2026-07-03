@@ -117,25 +117,26 @@ class DBConnectionWrapper:
     def close(self):
         self.conn.close()
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "synapse_meta.db")
+def _get_db_path():
+    is_vercel = os.environ.get("VERCEL") == "1"
+    if is_vercel:
+        return os.path.join("/tmp", "synapse_meta.db")
+    return os.path.join(os.path.dirname(__file__), "synapse_meta.db")
+
+DB_PATH = _get_db_path()
 
 def get_db_connection():
     postgres_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
     is_vercel = os.environ.get("VERCEL") == "1"
     
-    if is_vercel and not postgres_url:
-        raise RuntimeError(
-            "DATABASE_URL or POSTGRES_URL environment variable is missing, "
-            "but the application is running in a Vercel serverless environment. "
-            "PostgreSQL is required in production."
-        )
-        
     if postgres_url:
         import psycopg2
         conn = psycopg2.connect(postgres_url)
         return DBConnectionWrapper(conn, is_postgres=True)
     else:
-        conn = sqlite3.connect(DB_PATH)
+        db_path = DB_PATH
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         return DBConnectionWrapper(conn, is_postgres=False)
 
