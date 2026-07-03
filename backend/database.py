@@ -127,7 +127,6 @@ DB_PATH = _get_db_path()
 
 def get_db_connection():
     postgres_url = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL")
-    is_vercel = os.environ.get("VERCEL") == "1"
     
     if postgres_url:
         import psycopg2
