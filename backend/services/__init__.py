@@ -109,6 +109,14 @@ def get_session_id(user_id: str | None = None) -> str:
     uid = user_id if user_id else get_current_user()
     return f"session_{uid}" if uid else "default_session"
 
+# Ensure env vars are set so Cognee's internal LLM framework (litellm) can find them
+if GEMINI_API_KEY and not os.environ.get("GEMINI_API_KEY"):
+    os.environ["GEMINI_API_KEY"] = GEMINI_API_KEY
+if GROQ_API_KEY and not os.environ.get("GROQ_API_KEY"):
+    os.environ["GROQ_API_KEY"] = GROQ_API_KEY
+# Cognee v1.2.2 enables multi-user auth by default; disable it for single-user/session usage
+os.environ.setdefault("ENABLE_BACKEND_ACCESS_CONTROL", "false")
+
 try:
     import cognee
 
@@ -245,7 +253,7 @@ async def call_llm(prompt: str, system_prompt: str = "You are a precise, analyti
     text = ""
     config = db_get_user_ai_config()
 
-    if config:
+    if config and config.get("api_key"):
         provider = config["provider"]
         api_key = config["api_key"]
         model = config["model"]
@@ -254,13 +262,15 @@ async def call_llm(prompt: str, system_prompt: str = "You are a precise, analyti
         from openai import AsyncOpenAI
         if provider == "gemini":
             base_url = "https://generativelanguage.googleapis.com/v1beta/openai/"
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         elif provider == "groq":
             base_url = "https://api.groq.com/openai/v1"
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         else:
             base_url = "https://api.openai.com/v1"
+            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
         try:
-            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
             resp = await client.chat.completions.create(
                 model=clean_model,
                 messages=[
@@ -794,7 +804,6 @@ async def get_graph_snapshot() -> GraphSnapshot:
         try:
             nodes, edges = await cognee.get_memory_provenance_graph(
                 include_memory=True,
-                datasets=[get_cognee_dataset()],
             )
             mapped_nodes = []
             seen_nodes = set()

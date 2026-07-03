@@ -54,20 +54,14 @@ from services import (
 
 limiter = Limiter(key_func=get_remote_address)
 
-async def verify_llm_authorization(x_synapse_key: str = Header(None), x_user_id: str = Header(default="")):
+async def verify_llm_authorization(x_synapse_key: str = Header(None)):
     secret = os.environ.get("SYNAPSE_ACCESS_KEY")
-    is_dev = os.environ.get("ENVIRONMENT", "production") == "development"
 
-    # In dev mode, allow requests with a user ID (from the proxy)
-    if is_dev and x_user_id:
+    # If no access key is configured (local dev), allow all requests
+    if not secret:
         return
 
-    # In production, always require the access key
-    if not secret:
-        raise HTTPException(status_code=500, detail="Server misconfigured: Access keys not configured")
-
-    allowed_keys = {k for k in (secret,) if k}
-    if x_synapse_key not in allowed_keys:
+    if x_synapse_key != secret:
         raise HTTPException(status_code=403, detail="Access key required.")
 
 app = FastAPI(
