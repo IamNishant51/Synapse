@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import NavRail from "./NavRail";
 import { IngestionProvider } from "@/context/IngestionContext";
@@ -12,6 +13,12 @@ import SessionProvider from "./SessionProvider";
 import ThemeProvider from "./ThemeProvider";
 
 function Providers({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    const ping = () => fetch("/api/proxy/health").catch(() => {});
+    ping();
+    const interval = setInterval(ping, 240000);
+    return () => clearInterval(interval);
+  }, []);
   return (
     <SessionProvider>
     <ThemeProvider attribute="class" defaultTheme="system">
