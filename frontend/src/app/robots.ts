@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/graph", "/ask", "/resolve", "/settings", "/login", "/api/"],
       },
     ],
-    sitemap: `https://synapse-memory.vercel.app/sitemap.xml`,
+    sitemap: `https://synapsememory.vercel.app/sitemap.xml`,
   };
 }

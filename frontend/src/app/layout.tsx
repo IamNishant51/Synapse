@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Synapse — A memory that knows when to update itself",
     description: "A self-organizing personal knowledge graph built on Cognee's memory lifecycle.",
-    url: process.env.NEXT_PUBLIC_APP_URL || "https://synapse-memory.vercel.app",
+    url: process.env.NEXT_PUBLIC_APP_URL || "https://synapsememory.vercel.app",
     siteName: "Synapse",
     images: [
       {
