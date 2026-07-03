@@ -592,7 +592,7 @@ export default function LandingPage() {
                 )}
               </div>
             ) : (
-              <a href="/settings" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">Sign In</a>
+              <a href="/login" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors">Sign In</a>
             )}
           </div>
 
@@ -682,7 +682,7 @@ export default function LandingPage() {
                 </button>
               </div>
             ) : (
-              <a href="/settings" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors w-full py-1">Sign In</a>
+              <a href="/login" className="text-[15px] font-medium text-[var(--color-body)] hover:text-[var(--color-ink)] transition-colors w-full py-1">Sign In</a>
             )}
           </div>
         )}
